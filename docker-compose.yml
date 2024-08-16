@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: spring_21
+      MYSQL_USER: user
+      MYSQL_PASSWORD: icehot2001
+    ports:
+      - "3307:3306"
+    networks:
+      - spring-demo
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8091:8090"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/spring_21
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: icehot2001
+      SPRING_APPLICATION_NAME: demoE
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID: 621355433281-em1qb0aa7jcii3gueo1jpmhghc1qc7la.apps.googleusercontent.com
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET: GOCSPX-QnVybm6isFKDlPCFP4YTeT
+      SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI: http://localhost:8090/login/oauth2/code/google
+      APPLICATION_SECURITY_JWT_EXPIRATION: 86400
+      APPLICATION_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION: 864000
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:9090/realms/book-social-network
+    networks:
+      - spring-demo
+    depends_on:
+      - mysql-db
+
+  keycloak:
+    container_name: keycloak-bsn
+    image: quay.io/keycloak/keycloak:24.0.2
+    ports:
+      - "9090:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    networks:
+      - spring-demo
+    command:
+      - "start-dev"
+networks:
+    spring-demo:
+      driver: bridge
+volumes:
+  mysql_data:
