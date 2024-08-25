@@ -3,6 +3,7 @@ package com.example.demoe.Dto.Product;
 import com.example.demoe.Entity.product.Discount;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 @Getter
 @Setter
+
 public class ProductDetailDto {
     private Long id;
     private String productName;

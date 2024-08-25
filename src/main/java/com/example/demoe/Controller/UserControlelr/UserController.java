@@ -3,7 +3,6 @@ package com.example.demoe.Controller.UserControlelr;
 import com.example.demoe.Config.JwtService1;
 import com.example.demoe.Dto.User.UserDTO;
 import com.example.demoe.Dto.User.UserMDTO;
-import com.example.demoe.Entity.Address;
 import com.example.demoe.Entity.ROLE.Role;
 import com.example.demoe.Entity.TOKEN.Token;
 import com.example.demoe.Entity.TOKEN.TokenType;
@@ -74,14 +73,15 @@ public class UserController {
         if(user1.isPresent()){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new UserMDTO("email is exist"));
         }
-        Address address=new Address();
+
         if (user.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         } else {
             return ResponseEntity.status(HttpStatusCode.valueOf(400)).body(new UserMDTO("password is null"));
         }
-        addressRepo.save(address);
-        user.addAddress(address);
+//        Address address=new Address();
+//        addressRepo.save(address);
+//        user.addAddress(address);
         user.setRole(Role.USER);
 
 

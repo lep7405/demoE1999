@@ -2,7 +2,7 @@
 package com.example.demoe.Config;
 
 import com.example.demoe.Dto.User.UserDTO;
-import com.example.demoe.Entity.Address;
+import com.example.demoe.Entity.Address.Address;
 import com.example.demoe.Entity.ROLE.Role;
 import com.example.demoe.Entity.TOKEN.Token;
 import com.example.demoe.Entity.TOKEN.TokenType;
@@ -81,6 +81,11 @@ public class SecurityConfiguration {
             "/product/test-redis",
             "/product/testPro/**",
             "/product/**",
+            "/cart/clear",
+            "/payment/**",
+
+            "/order/getOrder1/**",
+            "/order/getOrder1Item/**"
 
     };
     @Bean

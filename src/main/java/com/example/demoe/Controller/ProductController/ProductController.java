@@ -15,7 +15,7 @@ import com.example.demoe.Entity.Admin;
 import com.example.demoe.Entity.product.*;
 import com.example.demoe.Repository.*;
 import com.example.demoe.Service.ElasticsearchService;
-import com.example.demoe.Service.ProductService;
+//import com.example.demoe.Service.ProductService;
 import com.example.demoe.Service.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -57,8 +58,8 @@ public class ProductController {
     private AdminRepo adminRepo;
     @Autowired
     private S3Service s3Service;
-    @Autowired
-    private ProductService productService;
+//    @Autowired
+//    private ProductService productService;
     @Autowired
     private DiscountRepo discountRepo;
     @Autowired
@@ -138,7 +139,7 @@ public class ProductController {
             MultipartFile file = productVariantDTO.getFile();
             ProVar proVar = new ProVar();
             proVar.setPrice(new BigDecimal(productVariantDTO.getPrice()));
-            proVar.setStock(new BigDecimal(productVariantDTO.getStock()));
+            proVar.setStock(Integer.valueOf((productVariantDTO.getStock())));
             proVar.setImage(s3Service.uploadToS3(file, "productVarImage"));
             productVarRepo.save(proVar);
             product.addProVar(proVar);
@@ -258,16 +259,16 @@ public class ProductController {
         }
     }
 
-    @GetMapping("/test-redis")
-    public String testRedis() {
-        productService.loadProductsToRedisWithPipeline();
-        return "successFul";
-    }
-    @GetMapping("/test-redis-getAllProduct")
-    public ResponseEntity<List<Product>> testRedisGetAllProduct() {
-        List<Product> productList=productService.getProductsFromRedis();
-        return ResponseEntity.ok(productList);
-    }
+//    @GetMapping("/test-redis")
+//    public String testRedis() {
+//        productService.loadProductsToRedisWithPipeline();
+//        return "successFul";
+//    }
+//    @GetMapping("/test-redis-getAllProduct")
+//    public ResponseEntity<List<Product>> testRedisGetAllProduct() {
+//        List<Product> productList=productService.getProductsFromRedis();
+//        return ResponseEntity.ok(productList);
+//    }
 
     @PostMapping("/updateProduct")
     public ResponseEntity<String> updateProduct(
@@ -390,7 +391,7 @@ public class ProductController {
 
                 proVar.setImage(s3Service.uploadToS3(productVariantDTO.getFile(), "productVarImage"));
                 proVar.setPrice(new BigDecimal(productVariantDTO.getPrice()));
-                proVar.setStock(new BigDecimal(productVariantDTO.getStock()));
+                proVar.setStock(Integer.valueOf((productVariantDTO.getStock())));
                 proVar.setProduct(product.get());
                 productVarRepo.save(proVar);
                 for(ExtraValueUpdate v:productVariantDTO.getExtraValue()){
@@ -420,7 +421,7 @@ public class ProductController {
 
             }
             proVar.setPrice(new BigDecimal(productVariantDTO.getPrice()));
-            proVar.setStock(new BigDecimal(productVariantDTO.getStock()));
+            proVar.setStock(Integer.valueOf((productVariantDTO.getStock())));
 
             if (productVariantDTO.getExtraValue() != null) {
                 productVariantDTO.getExtraValue().forEach(extraValueUpdate -> {
@@ -557,6 +558,25 @@ public class ProductController {
         List<?> productList=elasticsearchService.indexProducts(allProducts);
         return ResponseEntity.ok(productList);
     }
+    @GetMapping("/suggestion")
+    public ResponseEntity<List<Map<String,String>>> suggestion(@RequestParam("prefix") String prefix) throws IOException {
+        String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
+
+        // Loại bỏ các ký tự dấu (diacritics)
+        String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
+        List<Map<String,String>> productList=elasticsearchService.getSuggestions(prefix_no_diacritics);
+        return ResponseEntity.ok(productList);
+    }
+    @GetMapping("/getProductSearch")
+    public ResponseEntity<List<ProDto1>> getProductSearch(@RequestParam("prefix") String prefix) {
+        String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
+
+        // Loại bỏ các ký tự dấu (diacritics)
+        String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
+        List<ProDto1> productList=elasticsearchService.getProductSearch(prefix_no_diacritics);
+        return ResponseEntity.ok(productList);
+    }
+
     @GetMapping("/getAllProductFromElastic")
     public ResponseEntity<List<Product>> getAllProductFromElastic() {
 
@@ -576,7 +596,7 @@ public class ProductController {
         List<Map<String,String>> productList=elasticsearchService.prefixProduct2(prefix);
         return ResponseEntity.ok(productList);
     }
-
+    // kết thúc elastic
     @PostMapping("/updateCountProduct/{id}")
     public ResponseEntity<Product> updateCountProduct(@PathVariable("id") Long id) {
         Product product=productRepo.findById(id).get();
@@ -792,7 +812,7 @@ public class ProductController {
         ProVar proVar = new ProVar();
         proVar.setImage(s3Service.uploadToS3(dto.getFile(), "productVarImage"));
         proVar.setPrice(new BigDecimal(dto.getPrice()));
-        proVar.setStock(new BigDecimal(dto.getStock()));
+        proVar.setStock(Integer.valueOf((dto.getStock())));
         proVar.setProduct(product);
         return proVar;
     }
@@ -805,7 +825,7 @@ public class ProductController {
             proVar.setImage(dto.getImage());
         }
         proVar.setPrice(new BigDecimal(dto.getPrice()));
-        proVar.setStock(new BigDecimal(dto.getStock()));
+        proVar.setStock(Integer.valueOf((dto.getStock())));
         return proVar;
     }
 

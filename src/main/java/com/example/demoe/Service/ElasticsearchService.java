@@ -7,21 +7,30 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.example.demoe.Dto.Product.ProductDetailDto;
+import com.example.demoe.Dto.Product.ProductRanDom.ProDto1;
+import com.example.demoe.Entity.product.Discount;
+import com.example.demoe.Entity.product.ProVar;
 import com.example.demoe.Entity.product.Product;
+import com.example.demoe.Repository.DiscountRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.util.*;
 
 @Service
 public class ElasticsearchService {
     @Autowired
     private ElasticsearchClient elasticsearchClient;
+    @Autowired
+    private S3Service s3Service;
+    @Autowired
+    private DiscountRepo discountRepo;
     public List<Product> fetchDataFromElasticsearch() {
         String indexName = "productsss"; // Thay thế bằng tên chỉ mục thực tế của bạn
 
@@ -48,10 +57,17 @@ public class ElasticsearchService {
     public List<IndexResponse> indexProducts(List<Product> productList) {
         List<IndexResponse> ids = new ArrayList<>();
         for (Product productDocument : productList) {
+            String normalizedString = Normalizer.normalize(productDocument.getProductName(), Normalizer.Form.NFD);
+
+            // Loại bỏ các ký tự dấu (diacritics)
+            String productName_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
+            String productNameSearch=normalizedString.replaceAll("\\p{M}", "");
+            productDocument.setProductName_no_diacritics(productName_no_diacritics);
+            productDocument.setProductNameSearch(productNameSearch);
             try {
                 IndexRequest<Product> request = new IndexRequest.Builder<Product>()
-                        .index("productsss") // Thay thế bằng tên chỉ mục thực tế của bạn
-                        .id(String.valueOf(productDocument.getId())) // ID của document
+                        .index("products") // Thay thế bằng tên chỉ mục thực tế của bạn
+                        .id(String.valueOf(productDocument.getId()))
                         .document(productDocument)
                         .build();
 
@@ -225,6 +241,93 @@ public class ElasticsearchService {
         }
 
         return results;
+    }
+
+    public List<Map<String, String>> getSuggestions(String prefix) throws IOException {
+        List<Map<String, String>> results = new ArrayList<>();
+        SearchRequest searchRequest = SearchRequest.of(sr -> sr
+                .suggest(s -> s
+                        .suggesters("product-suggest", sg -> sg
+                                .prefix(prefix)
+                                .completion(c -> c
+                                        .field("productName_no_diacritics")
+                                        .size(10)
+                                )
+                        )
+                )
+        );
+
+        SearchResponse<Product> searchResponse = elasticsearchClient.search(searchRequest, Product.class);
+        for (var hit : searchResponse.suggest().get("product-suggest").get(0).completion().options()) {
+            Map<String, String> product = new HashMap<>();
+            product.put("productName", hit.source().getProductName());
+            product.put("id", String.valueOf(hit.source().getId()));
+            results.add(product);
+        }
+       return results;
+    }
+
+    public List<ProDto1> getProductSearch(String productNamePrefix) {
+        List<ProDto1> products1 = new ArrayList<>();
+        try {
+            // Tạo SearchRequest
+            SearchRequest searchRequest = new SearchRequest.Builder()
+                    .index("products") // Chỉ mục bạn cần tìm kiếm
+                    .query(q -> q
+                            .match(m -> m
+                                    .field("productNameSearch") // Trường cần tìm kiếm
+                                    .query(productNamePrefix) // Giá trị prefix
+                                    .operator(Operator.And) // Sử dụng toán tử AND cho tìm kiếm
+                            )
+                    )
+                    .build();
+
+            // Thực hiện tìm kiếm
+            SearchResponse<Product> searchResponse = elasticsearchClient.search(searchRequest, Product.class);
+
+            // Xử lý kết quả tìm kiếm
+            for (var hit : searchResponse.hits().hits()) {
+                Map<String, String> product = new HashMap<>();
+
+                ProDto1 proDto=new ProDto1();
+
+                proDto.setId(hit.source().getId());
+                proDto.setProductName(hit.source().getProductName());
+                proDto.setImage(s3Service.getPresignedUrl(hit.source().getImages().get(0)));
+                BigDecimal minPrice = hit.source().getProVarList().stream()
+                        .map(ProVar::getPrice)
+                        .min(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO); // Giá trị mặc định nếu danh sách rỗng
+
+                proDto.setPrice(minPrice);
+
+                proDto.setNumberOfStars(hit.source().getRateCount());
+                proDto.setAverageStars(hit.source().getAverageRate());
+
+                List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),hit.source().getId());
+                Optional<Discount> discountlv2 = discountList.stream()
+                        .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
+                        .findFirst();
+                Optional<Discount> discountlv1 = discountList.stream()
+                        .filter(d -> d.getLevel() != null && d.getLevel() == 1&&d.getIsActive()==true)
+                        .findFirst();
+                if(discountlv2.isPresent()){
+                    proDto.setDiscount(discountlv2.get());
+                }
+                else{
+                    if(discountlv1.isPresent()){
+                        proDto.setDiscount(discountlv1.get());
+                    }
+                }
+                products1.add(proDto);
+//                product.put("productName", hit.source().getProductName());
+//                product.put("id", String.valueOf(hit.source().getId()));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return products1;
     }
 }
 

@@ -1,5 +1,6 @@
 package com.example.demoe.Entity.product;
 import com.example.demoe.Entity.Admin;
+import com.example.demoe.Entity.Order.Order1Item;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -28,7 +29,10 @@ public class Product {
     private Integer max1Buy;
     @ElementCollection
     private List<String> images = new ArrayList<>();
-
+    @Transient
+    private String productName_no_diacritics;
+    @Transient
+    private String productNameSearch;
 
 //    @Type(JsonType.class)
 //    @Column(columnDefinition = "json")
@@ -122,5 +126,17 @@ public class Product {
     public void addCountProduct(CountProduct countProduct) {
         this.countProduct = countProduct;
         countProduct.setProduct(this);
+    }
+
+    @OneToMany(mappedBy = "product")
+    @JsonIgnore
+    private List<Order1Item> order1Items;
+
+    public void addOrder1Item(Order1Item order1Item) {
+        if(order1Items==null){
+            order1Items=new ArrayList<>();
+        }
+        order1Items.add(order1Item);
+        order1Item.setProduct(this);
     }
 }

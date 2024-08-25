@@ -2,12 +2,11 @@ package com.example.demoe.Entity.cart;
 
 import com.example.demoe.Entity.product.Discount;
 import com.example.demoe.Entity.product.ProVar;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Entity
@@ -15,14 +14,20 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+    private Long productId;
     private Short quantity;
+    private BigDecimal discountValue;
+    private String productName;
     private Integer max1Buy;
+//    private BigDecimal price;
 
-    @OneToOne(mappedBy = "cartItem")
+    @OneToOne
+    @JoinColumn(name = "pro_var_id")
     private ProVar proVar;
 
     public void addPro(ProVar proVar) {
@@ -30,11 +35,17 @@ public class CartItem {
         proVar.setCartItem(this);
     }
 
-    @OneToOne(mappedBy = "cartItem")
-    private Discount discount;
+    @ManyToOne
+    @JoinColumn(name = "cart_id")
+    @JsonIgnore
+    private Cart cart;
 
-    public void addDiscount(Discount discount) {
-        this.discount = discount;
-        discount.setCartItem(this);
-    }
+
+//    @OneToOne(mappedBy = "cartItem")
+//    private Discount discount;
+//
+//    public void addDiscount(Discount discount) {
+//        this.discount = discount;
+//        discount.setCartItem(this);
+//    }
 }

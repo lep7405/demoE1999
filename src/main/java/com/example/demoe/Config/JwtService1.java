@@ -63,8 +63,8 @@ private static final String PUBLIC_KEY_PROPERTY = "rsa.public.key";
             }
         }
 
-        System.out.println("Public Key: " + Base64.getEncoder().encodeToString(this.keyPair.getPublic().getEncoded()));
-        System.out.println("Private Key: " + Base64.getEncoder().encodeToString(this.keyPair.getPrivate().getEncoded()));
+//        System.out.println("Public Key: " + Base64.getEncoder().encodeToString(this.keyPair.getPublic().getEncoded()));
+//        System.out.println("Private Key: " + Base64.getEncoder().encodeToString(this.keyPair.getPrivate().getEncoded()));
     }
 
     private static KeyPair generateRsaKeyPair() throws NoSuchAlgorithmException {
@@ -81,13 +81,14 @@ private static final String PUBLIC_KEY_PROPERTY = "rsa.public.key";
             // Xử lý trường hợp tham số claims là null tại đây, ví dụ:
             claims = new HashMap<>(); // hoặc bất kỳ xử lý nào khác
         }
-        System.out.println("45"+keyPair.getPrivate());
-        System.out.println("46"+keyPair.getPublic());
+//        System.out.println("45"+keyPair.getPrivate());
+//        System.out.println("46"+keyPair.getPublic());
+        long expiration1 = 24*7 * 60 * 60 * 1000;
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis()+expiration))
+                .setExpiration(new Date(System.currentTimeMillis()+expiration1))
                 .signWith(keyPair.getPrivate())
                 .compact();
     }
@@ -99,8 +100,8 @@ private static final String PUBLIC_KEY_PROPERTY = "rsa.public.key";
     }
     //giải token
     public Claims extraToken(String token) throws NoSuchAlgorithmException {
-        System.out.println("63"+keyPair.getPrivate());
-        System.out.println("64"+keyPair.getPublic());
+//        System.out.println("63"+keyPair.getPrivate());
+//        System.out.println("64"+keyPair.getPublic());
         return Jwts.parserBuilder().setSigningKey(keyPair.getPublic()).build().parseClaimsJws(token).getBody();
     }
     public Claims extraRefreshToken(String token) throws NoSuchAlgorithmException {

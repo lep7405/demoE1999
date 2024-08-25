@@ -1,5 +1,7 @@
 package com.example.demoe.Entity;
 
+import com.example.demoe.Entity.Address.Address;
+import com.example.demoe.Entity.Order.Order1;
 import com.example.demoe.Entity.cart.Cart;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -31,4 +33,15 @@ public class User extends Account {
     @OneToOne
     @JoinColumn(name = "cart_id")
     private Cart cart;
+
+    @OneToMany(mappedBy = "user")
+    private List<Order1> order1s;
+
+    public void addOrder1(Order1 order1) {
+        if(order1s == null) {
+            order1s = new ArrayList<>();
+        }
+        order1s.add(order1);
+        order1.setUser(this);
+    }
 }

@@ -47,9 +47,12 @@ public class JwtAuthFilter1 extends OncePerRequestFilter {
             var isTokenValid = tokenRepo.findByToken(jwt)
                     .map(t -> !t.isRevolked() && !t.isRevolked())
                     .orElse(false);
+            logger.info("useeeeeeeeeeeeeeeeeeeeeeeeeeeeeee "+userDetails);
             try {
                 if(jwtService1.isValidToken(userDetails,jwt)&&isTokenValid){
+                    logger.info("useeeeeeeeeeeeeeeeeeeeeeeeeeeeeee 2222222");
                     if(jwtService1.isExpirationToken(jwt)){
+                        logger.info("useeeeeeeeeeeeeeeeeeeeeeeeeeeeeee 1111111111");
                         UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken=new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
                         usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         logger.info("hs"+usernamePasswordAuthenticationToken);

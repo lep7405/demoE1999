@@ -52,11 +52,12 @@ public class ApplicationConfig {
     public UserDetailsService userDetailsService() {
         return email -> {
             User user = userRepo.findByEmail(email).orElse(null);
-            Admin admin = adminRepo.findByEmail(email).orElse(null);
+
             if(user!=null){
                 return user;
             }
             else{
+                Admin admin = adminRepo.findByEmail(email).orElse(null);
                 if(admin!=null){
                     return admin;
                 }

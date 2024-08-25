@@ -1,5 +1,6 @@
 package com.example.demoe.Entity.product;
 
+import com.example.demoe.Entity.Order.Order1Item;
 import com.example.demoe.Entity.cart.CartItem;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -22,7 +23,7 @@ public class ProVar {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private BigDecimal price;
-    private BigDecimal stock;
+    private Integer stock;
     @Column(columnDefinition = "TEXT")
     private String image;
 
@@ -42,8 +43,10 @@ public class ProVar {
         var.setProVar(this);
     }
 
-    @OneToOne
-    @JoinColumn(name = "cartItem_id")
+    @OneToOne(mappedBy = "proVar")
     @JsonIgnore
     private CartItem cartItem;
+    @OneToOne(mappedBy = "proVar")
+    @JsonIgnore
+    private Order1Item order1Item;
 }
