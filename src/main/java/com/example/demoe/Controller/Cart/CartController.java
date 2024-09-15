@@ -302,12 +302,10 @@ public class CartController {
         cartItemDto.setImage(image);
         List<CartItemDto> cartItemDtoList=new ArrayList<>();
         cartItemDtoList.add(cartItemDto);
-//        CartDto cartDto=new CartDto(cart.get().getId(),cartItemDtoList);
         if(!checkRedis){
             String json = objectMapper.writeValueAsString(cartItemDto);
             jedis.jsonArrAppend(redisKey, Path2.of("$.cartItems"), json);
 //            jedis.jsonSet(redisKey, new Path2("$.cartItems"), json);
-            System.out.println("just store in redisss");
         }
         return ResponseEntity.ok("Add to success");
     }
@@ -332,71 +330,21 @@ public class CartController {
 
     @PostMapping("/updateCartItem")
     public ResponseEntity<CartItemDto> updateCartItem(@RequestBody UpdateCartItemRequest request) {
-        long startTime, endTime, duration;
-
-        // Đo thời gian lấy instance của Jedis
-        startTime = System.nanoTime();
         UnifiedJedis jedis = JedisSingleton.getInstance();
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian lấy UnifiedJedis: " + duration + " nanoseconds");
-
-        // Đo thời gian lấy thông tin authentication
-        startTime = System.nanoTime();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = (User) authentication.getPrincipal();
         String email = user.getEmail();
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian lấy thông tin user từ SecurityContext: " + duration + " nanoseconds");
-
-        // Đo thời gian lấy user từ database
-        startTime = System.nanoTime();
         Optional<User> user1 = userRepo.findByEmail(email);
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian lấy user từ database: " + duration + " nanoseconds");
-
-        // Đo thời gian lấy cart từ database
-        startTime = System.nanoTime();
         Optional<Cart> cart = cartRepo.findCart(user1.get().getId());
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian lấy cart từ database: " + duration + " nanoseconds");
-
-        // Đo thời gian lấy cartItem từ database
-        startTime = System.nanoTime();
         CartItem cartItem = cartItemRepo.findById(request.getId()).get();
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian lấy cartItem từ database: " + duration + " nanoseconds");
-
-        // Đo thời gian cập nhật quantity cho cartItem
-        startTime = System.nanoTime();
         cartItem.setQuantity(request.getQuantity());
         cartItemRepo.save(cartItem);
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian cập nhật quantity và lưu cartItem: " + duration + " nanoseconds");
-
-        // Đo thời gian cập nhật Redis
-        startTime = System.nanoTime();
         String pathToQuantity = "$.cartItems[?(@.id==" + request.getId() + ")].quantity";
         jedis.jsonSet("cart:" + user1.get().getId(), new Path2(pathToQuantity), request.getQuantity());
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian cập nhật Redis: " + duration + " nanoseconds");
-
-        // Đo thời gian tạo response
-        startTime = System.nanoTime();
         ResponseEntity<CartItemDto> response = ResponseEntity.ok(CartItemDto.builder()
                 .id(cartItem.getId())
                 .quantity(cartItem.getQuantity())
                 .build());
-        endTime = System.nanoTime();
-        duration = endTime - startTime;
-        System.out.println("Thời gian tạo response: " + duration + " nanoseconds");
-
         return response;
     }
 
@@ -440,35 +388,6 @@ public class CartController {
         String pathToQuantity = "$.cartItems";
         String newValue = "[]";
         jedis.jsonDel(key);
-        return ResponseEntity.ok("success");
-    }
-    @GetMapping("/test")
-    public ResponseEntity<String> test(@RequestParam("quantity") int quantity) {
-        UnifiedJedis jedis = JedisSingleton.getInstance();
-//        String pathToQuantity = "$.cartItems[?(@.id==203)].max1Buy";
-//
-//// Giá trị quantity mới
-//        int newQuantity = 20;
-//
-//// Cập nhật giá trị quantity trong Redis
-//        jedis.jsonSet("cart:52", new Path2(pathToQuantity), newQuantity);
-
-        String pathToQuantityy = "$.cartItems[?(@.id==" + quantity + ")].quantity";
-
-// Giá trị quantity mới
-        int newQuantityy = 7;
-
-// Cập nhật giá trị quantity trong Redis
-        jedis.jsonSet("cart:52", new Path2(pathToQuantityy), newQuantityy);
-//
-//
-//        String pathToQuantity1 = "$.cartItems[?(@.id==202)].max1Buy";
-//
-//// Giá trị quantity mới
-//        int newQuantity1 = 30;
-//
-//// Cập nhật giá trị quantity trong Redis
-//        jedis.jsonSet("cart:52", new Path2(pathToQuantity1), newQuantity1);
         return ResponseEntity.ok("success");
     }
 

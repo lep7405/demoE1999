@@ -34,7 +34,6 @@ import java.util.Optional;
 @CrossOrigin(origins ={"http://localhost:5173", "http://localhost:5174"})
 public class AdminController {
     private final AuthenticationManager authenticationManager;
-    private Singleton singleton = Singleton.getInstance(null);
     @Autowired
     private JwtService1 jwtService1;
     @Autowired
@@ -86,18 +85,9 @@ public class AdminController {
         });
         tokenRepository.saveAll(tokenList);
     }
-    @GetMapping("/test-singleton")
-    public String test(){
-        return singleton.getValue();
-    }
 
     @GetMapping("/getInfoAdmin")
     public Admin getInfoAdmin(){
-//        Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
-//        Admin admin = (Admin) authentication.getPrincipal();
-//        String email=admin.getEmail();
-//        Optional<Admin> admin1=adminRepo.findByEmail(email);
-
         Optional<Admin> admin1=adminRepo.findById(2L);
 
         return admin1.get();

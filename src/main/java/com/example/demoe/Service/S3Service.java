@@ -75,11 +75,6 @@ public class S3Service {
 
     }
 
-    private static ByteBuffer getRandomByteBuffer(int size) throws IOException {
-        byte[] b = new byte[size];
-        new Random().nextBytes(b);
-        return ByteBuffer.wrap(b);
-    }
     public List<String> addtoS3(MultipartFile[] multipartFiles,String text) throws IOException {
         List<String> imageUrls = new ArrayList<>();
 
@@ -160,63 +155,3 @@ public class S3Service {
 
 
 }
-
-//public List<String> addtoS3improve2(MultipartFile[] multipartFiles, String text) throws IOException {
-//    List<String> imageUrls = new ArrayList<>();
-//
-//    try (S3Client s3Client = S3Client.builder().region(region).build()) {
-//        for (MultipartFile multipartFile : multipartFiles) {
-//            String filename = text + "/" + multipartFile.getOriginalFilename();
-//            InputStream fileInputStream = multipartFile.getInputStream();
-//
-//            // Tạo yêu cầu multipart upload
-//            CreateMultipartUploadRequest createRequest = CreateMultipartUploadRequest.builder()
-//                    .bucket(bucketName)
-//                    .key(filename)
-//                    .build();
-//
-//            CreateMultipartUploadResponse createResponse = s3Client.createMultipartUpload(createRequest);
-//            String uploadId = createResponse.uploadId();
-//
-//            // Chia file thành các phần và upload song song
-//            List<CompletedPart> completedParts = new ArrayList<>();
-//            int partSize = 5 * 1024 * 1024; // 5MB
-//            byte[] buffer = new byte[partSize];
-//            int bytesRead;
-//            int partNumber = 1;
-//
-//            while ((bytesRead = fileInputStream.read(buffer)) > 0) {
-//                UploadPartRequest uploadPartRequest = UploadPartRequest.builder()
-//                        .bucket(bucketName)
-//                        .key(filename)
-//                        .uploadId(uploadId)
-//                        .partNumber(partNumber++)
-//                        .build();
-//
-//                UploadPartResponse uploadPartResponse = s3Client.uploadPart(uploadPartRequest,
-//                        RequestBody.fromBytes(buffer, 0, bytesRead));
-//
-//                completedParts.add(CompletedPart.builder()
-//                        .partNumber(uploadPartRequest.partNumber())
-//                        .eTag(uploadPartResponse.eTag())
-//                        .build());
-//            }
-//
-//            // Hoàn tất việc upload
-//            CompleteMultipartUploadRequest completeRequest = CompleteMultipartUploadRequest.builder()
-//                    .bucket(bucketName)
-//                    .key(filename)
-//                    .uploadId(uploadId)
-//                    .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
-//                    .build();
-//
-//            s3Client.completeMultipartUpload(completeRequest);
-//
-//            imageUrls.add(filename);
-//        }
-//        return imageUrls;
-//    } catch (IOException e) {
-//        e.printStackTrace();
-//        throw e;
-//    }
-//}

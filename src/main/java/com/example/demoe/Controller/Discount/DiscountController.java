@@ -37,8 +37,7 @@ public class DiscountController {
     private ProductRepo productRepo;
     @Autowired
     private AdminRepo adminRepo;
-    //cái này là discount cho 1 loạt,tạo xong có áp dụng luôn rồi áp dụng luôn cho toàn bộ
-    @PostMapping("/create")
+    @PostMapping("/createDiscountlv2")
     public ResponseEntity<DiscountDtoMessage> createDiscount(@RequestBody Discount discount) {
         System.out.println("discount"+discount.getDiscountValue());
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -79,14 +78,7 @@ public class DiscountController {
 
         return ResponseEntity.ok(new DiscountDtoMessage("success",discount));
     }
-    //add vào product
-
-//    @PostMapping
-    //cái này là discoun cho tưng product riêng lẻ
-    //check thời gian tạo nữa không nó bị trùng
-
-    //Cái này chỉ là create Discount cho 1 product thôi
-    @PostMapping("/create1")
+    @PostMapping("/createDiscountLv1")
         public ResponseEntity<DiscountDtoMessage> createDiscount(@RequestBody CreatepPerDiscountRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Admin admin = (Admin) authentication.getPrincipal();
@@ -149,12 +141,9 @@ public class DiscountController {
                 pro.getDiscounts().removeIf(item -> item.getId().equals(id));
                 productRepo.save(pro);
             }
-            // Xóa bản ghi
             discountRepo.deleteById(id);
-            // Trả về phản hồi thành công
             return ResponseEntity.ok(new DiscountDtoMessage("Discount deleted successfully.",id));
         } else {
-            // Nếu không tìm thấy bản ghi, trả về lỗi 404
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new DiscountDtoMessage("Discount not found."));
         }
@@ -199,14 +188,11 @@ public class DiscountController {
         else if (level==2){
             Optional<Discount> discount=discountRepo.findById(id);
             if(discount.isPresent()){
-                //chỉ xóa cái id trong  discounts trong   product id thôi chứ không phải cái list product
                 Product product=productRepo.findById(productId).get();
                 product.getDiscounts().removeIf(item -> item.getId().equals(id));
                 productRepo.save(product);
-                // loại bỏ tham chiếu của product trong discount
                 discount.get().getProductList().removeIf(item -> item.getId().equals(productId));
                 discountRepo.save(discount.get());
-                // Trả về phản hồi này của bản ghi
                 return ResponseEntity.ok(new DiscountDtoMessage("Discount deleted successfully.",id));
             }
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -224,10 +210,6 @@ public class DiscountController {
         Admin admin = (Admin) authentication.getPrincipal();
         String email = admin.getEmail();
         Optional<Admin> admin1 = adminRepo.findByEmail(email);
-
-        if (!admin1.isPresent()) {
-//            return ResponseEntity.ok(new ProductDto("not found admin"));
-        }
         Discount discount=request.getDiscount();
         System.out.println("value"+discount.getDiscountValue());
         Product product=productRepo.findById(request.getProductId()).get();

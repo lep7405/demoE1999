@@ -43,7 +43,7 @@ public class ApplicationConfig {
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.starttls.required", "true"); // Đảm bảo rằng TLS là bắt buộc
+        props.put("mail.smtp.starttls.required", "true");
         props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
         return mailSender;

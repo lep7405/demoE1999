@@ -86,7 +86,6 @@ public class SecurityConfiguration {
             "/order/getOrder1Item/**",
             "/shipping/getShippingById/**",
             "/admin/getInfoAdmin"
-
     };
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
@@ -103,7 +102,6 @@ public class SecurityConfiguration {
                 .oauth2Login(oauth2->oauth2
                                 .loginPage("/oauth2/authorization/google")
                                 .clientRegistrationRepository(clientRegistrationRepository())
-//                        .userInfoEndpoint(userInfo -> userInfo.userService(oauth2UserService()))
                                 .successHandler(this::onAuthenticationSuccess)
                                 .failureHandler(this::onAuthenticationFailure)
                 )
@@ -112,7 +110,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter1, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(customAuthenticationEntryPoint) // Use the custom entry point
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 );
         ;
         return http.build();
@@ -179,18 +177,11 @@ public class SecurityConfiguration {
             UserDTO userDTO=new UserDTO(user1.get().getId(),user1.get().getEmail(),token);
             String userDtoJson = objectMapper.writeValueAsString(userDTO);
 
-            // Mã hóa chuỗi JSON bằng Base64
             String encodedUserDtoJson = Base64.getEncoder().encodeToString(userDtoJson.getBytes());
-
-            // Thiết lập cookie với chuỗi JSON mã hóa
             Cookie cookie = new Cookie("userDTO", encodedUserDtoJson);
-//            cookie.setHttpOnly(true); // Đảm bảo cookie chỉ có thể được truy cập bởi server
-//            cookie.setSecure(true); // Đảm bảo cookie chỉ được gửi qua HTTPS
-            cookie.setPath("/"); // Đảm bảo cookie có sẵn cho toàn bộ ứng dụng
-            cookie.setMaxAge(3600); // Đặt thời gian sống của cookie (tính bằng giây)
+            cookie.setPath("/");
+            cookie.setMaxAge(3600);
             response.addCookie(cookie);
-
-            // Redirect đến front-end mà không có token trong URL
             String redirectUrl = "http://localhost:5173/";
             response.sendRedirect(redirectUrl);
             return;
@@ -227,24 +218,15 @@ public class SecurityConfiguration {
         ObjectMapper objectMapper = new ObjectMapper();
         UserDTO userDTO=new UserDTO(savedUser.getId(),savedUser.getEmail(),token);
         String userDtoJson = objectMapper.writeValueAsString(userDTO);
-
-        // Mã hóa chuỗi JSON bằng Base64
         String encodedUserDtoJson = Base64.getEncoder().encodeToString(userDtoJson.getBytes());
-
-        // Thiết lập cookie với chuỗi JSON mã hóa
         Cookie cookie = new Cookie("userDTO", encodedUserDtoJson);
-        // Đảm bảo cookie chỉ được gửi qua HTTPS
-        cookie.setPath("/"); // Đảm bảo cookie có sẵn cho toàn bộ ứng dụng
-        cookie.setMaxAge(3600); // Đặt thời gian sống của cookie (tính bằng giây)
+        cookie.setPath("/");
+        cookie.setMaxAge(3600);
         response.addCookie(cookie);
-
-        // Redirect đến front-end mà không có token trong URL
         String redirectUrl = "http://localhost:5173/";
         response.sendRedirect(redirectUrl);
     }
     private void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException  exception) throws IOException {
-
-        // Redirect đến front-end mà không có token trong URL
         String redirectUrl = "http://localhost:5173/register";
         response.sendRedirect(redirectUrl);
     }

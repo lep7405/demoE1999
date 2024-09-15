@@ -95,9 +95,6 @@ public class ProductController {
     public ResponseEntity<ProductDto> uploadProduct(
             @ModelAttribute ExtraProductVariantList extraProductVariantList
     ) throws IOException {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        Admin admin = (Admin) authentication.getPrincipal();
-//        String email = admin.getEmail();
         Optional<Admin> admin1 =adminService.getAuthenticatedAdmin();
         if (!admin1.isPresent()) {
             return ResponseEntity.ok(new ProductDto("not found admin"));
@@ -178,10 +175,6 @@ public class ProductController {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with email: " + extraProductVariantList.getId()));
         Product product1=productRepo.findByProductName(extraProductVariantList.getProductName())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with productName: " + extraProductVariantList.getProductName()));
-//        if(product1.isPresent()){
-//
-//        }
-
         Optional<Category> category = categoryRepo.findById(Long.valueOf(extraProductVariantList.getCategoryId()));
 
         product.setProductName(extraProductVariantList.getProductName());
@@ -226,7 +219,7 @@ public class ProductController {
             System.out.println("No images received in the request.");
         }
 
-        // Tìm phần chung giữa hai danh sách , cái list filename cũ
+
         List<String> common = new ArrayList<>(imgs);
         common.retainAll(filenames);
 
@@ -242,14 +235,14 @@ public class ProductController {
             System.out.println("Difference: " + dif);
             s3Service.dele(dif);
         }
-        // Tạo danh sách mới để chứa kết quả gộp
-        List<String> mergedList = new ArrayList<>(img); // Sao chép các phần tử của img vào mergedList
+
+        List<String> mergedList = new ArrayList<>(img);
         mergedList.addAll(common);
         product.setImages(mergedList);
         productRepo.save(product);
 
 
-        //product có 1 tập hợp id của proVar , thiếu cái nào gửi lên , delete cái đó luôn
+
         List<ProVar> proVarList=product.getProVarList();
         List<Long> validIds = proVarList.stream()
                 .map(ProVar::getId)
@@ -261,9 +254,8 @@ public class ProductController {
                 .filter(dto -> validIds.contains(dto.getId()))
                 .map(ExtraUpdate::getId)
                 .collect(Collectors.toList());
-//        for(ExtraUpdate ex:extraProductVariantList1){
-//            System.out.println("valid ex: "+ex.getId());
-//        }
+
+
         List<Long> result = validIds.stream()
                 .filter(id -> !extraProductVariantList1.contains(id))
                 .collect(Collectors.toList());
@@ -345,7 +337,6 @@ public class ProductController {
         }
         ;
 
-
         return ResponseEntity.ok("success");
     }
 
@@ -386,9 +377,6 @@ public class ProductController {
             }
             products1.add(proDto);
         }
-
-
-        // Tính số lượng trang tổng cộng
 
         return ResponseEntity.ok(new ListProDto(products1,0,"success"));
     }
@@ -445,13 +433,9 @@ public class ProductController {
         }
     }
 
-
-    //cái này thuộc phần elastic Sea
     @GetMapping("/suggestion")
     public ResponseEntity<List<Map<String,String>>> suggestion(@RequestParam("prefix") String prefix) throws IOException {
         String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
-
-        // Loại bỏ các ký tự dấu (diacritics)
         String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
         List<Map<String,String>> productList=elasticsearchService.getSuggestions(prefix_no_diacritics);
         return ResponseEntity.ok(productList);
@@ -580,24 +564,18 @@ public class ProductController {
             String path = urlObj.getPath();
             String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8.toString());
 
-            // Tìm vị trí của "productImage"
             int productImageIndex = decodedPath.indexOf("productImage");
             if (productImageIndex != -1) {
-                // Trả về phần từ "productImage" đến hết đường dẫn
                 String productImagePath = decodedPath.substring(productImageIndex);
-
-                // Loại bỏ tham số truy vấn nếu có
                 if (productImagePath.contains("?")) {
                     productImagePath = productImagePath.split("\\?")[0];
                 }
 
                 return productImagePath;
             } else {
-                // Nếu không tìm thấy "productImage", trả về toàn bộ tên tệp
                 String[] pathParts = decodedPath.split("/");
                 String filenameWithExtension = pathParts[pathParts.length - 1];
 
-                // Loại bỏ tham số truy vấn nếu có
                 if (filenameWithExtension.contains("?")) {
                     filenameWithExtension = filenameWithExtension.split("\\?")[0];
                 }
@@ -628,7 +606,6 @@ public class ProductController {
     public ResponseEntity<List<ProDto1>> getProductSearch(@RequestParam("prefix") String prefix) {
         String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
 
-        // Loại bỏ các ký tự dấu (diacritics)
         String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
         List<ProDto1> productList=elasticsearchService.getProductSearch(prefix_no_diacritics);
         return ResponseEntity.ok(productList);
@@ -640,27 +617,6 @@ public class ProductController {
         List<Product> productList=elasticsearchService.fetchDataFromElasticsearch();
         return ResponseEntity.ok(productList);
     }
-    @GetMapping("/prefixProduct")
-    public ResponseEntity<List<Product>> prefixProduct(@RequestParam("prefix") String prefix) {
-
-        List<Product> productList=elasticsearchService.prefixProduct(prefix);
-        return ResponseEntity.ok(productList);
-    }
-
-    @GetMapping("/recommentSearch")
-    public ResponseEntity<List<Map<String,String>>> recommentSearch(@RequestParam("prefix") String prefix) {
-
-        List<Map<String,String>> productList=elasticsearchService.prefixProduct2(prefix);
-        return ResponseEntity.ok(productList);
-    }
-    // kết thúc elastic
-
-
-
-
-    //get 10 sản phẩm có số lượt count nhiều nhất
-
-
 
     @GetMapping("/getRecommentSearch")
     public ResponseEntity<List<Map<String,String>>> RecommentSearch(@RequestParam("texts") String texts) {
@@ -768,233 +724,22 @@ public class ProductController {
     }
 
     public String maskEmail(String email) {
-        int visibleLength = 3; // Số ký tự đầu được hiển thị
-        String mask = "*****"; // Phần còn lại thay bằng dấu sao
+        int visibleLength = 3;
+        String mask = "*****";
 
         if (email == null || email.length() <= visibleLength) {
-            return email; // Nếu email quá ngắn thì không mask
+            return email;
         }
-
-        // Cắt lấy 3 ký tự đầu tiên
         String visiblePart = email.substring(0, visibleLength);
-
-        // Tìm vị trí của dấu '@'
         int atIndex = email.indexOf("@");
 
         if (atIndex != -1) {
-            // Giữ nguyên phần sau '@'
+
             String domainPart = email.substring(atIndex);
             return visiblePart + mask + domainPart;
         } else {
-            // Trường hợp không tìm thấy '@', chỉ mask phần còn lại
+
             return visiblePart + mask;
         }
     }
-
-
-
-
-
-
-    @GetMapping("/getProduct/{id}")
-    public Product getProduct() {
-        return productRepo.findById(1L).get();
-    }
-    @GetMapping("/testProvar/{id}")
-    public ResponseEntity<?> testProvar(@PathVariable("id") Long id) {
-        ProVar proVar = productVarRepo.findById(id).get();
-        return ResponseEntity.ok(proVar);
-    }
-
-    @PostMapping("/updateProduct1")
-    public ResponseEntity<String> updateProduct2(@ModelAttribute ExtraUpdateList extraProductVariantList) throws IOException {
-        Optional<Product> productOptional = productRepo.findById(extraProductVariantList.getId());
-        if (!productOptional.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
-        }
-
-        Product product = productOptional.get();
-        updateProductDetails(product, extraProductVariantList);
-
-        List<String> newImages = handleUploadedFiles(extraProductVariantList.getFiles());
-        List<String> existingImages = product.getImages();
-        List<String> imagesToRetain = extractImageFilenames(extraProductVariantList.getImages());
-
-        updateProductImages(product, newImages, existingImages, imagesToRetain);
-
-        updateProductVariants(product, extraProductVariantList);
-
-        productRepo.save(product);
-        return ResponseEntity.ok("success");
-    }
-
-    private void updateProductDetails(Product product, ExtraUpdateList extraProductVariantList) {
-        product.setProductName(extraProductVariantList.getProductName());
-        product.setDescription(extraProductVariantList.getDescription());
-        product.setMax1Buy(extraProductVariantList.getMax1Buy());
-        product.setActive(extraProductVariantList.getActive());
-
-        categoryRepo.findById(Long.valueOf(extraProductVariantList.getCategoryId()))
-                .ifPresent(product::addCategory);
-    }
-
-    private List<String> handleUploadedFiles(MultipartFile[] files) throws IOException {
-        if (files != null) {
-            return s3Service.addtoS3(files, "productImage");
-        }
-        return new ArrayList<>();
-    }
-
-    private List<String> extractImageFilenames(List<String> imageUrls) {
-        if (imageUrls != null) {
-            return imageUrls.stream()
-                    .map(this::extractFilenameFromUrl2)
-                    .collect(Collectors.toList());
-        }
-        return new ArrayList<>();
-    }
-
-    private void updateProductImages(Product product, List<String> newImages, List<String> existingImages, List<String> imagesToRetain) {
-        List<String> imagesToDelete = new ArrayList<>(existingImages);
-        imagesToDelete.removeAll(imagesToRetain);
-
-        imagesToDelete.forEach(s3Service::dele);
-
-        List<String> mergedImages = new ArrayList<>(newImages);
-        mergedImages.addAll(imagesToRetain);
-        product.setImages(mergedImages);
-    }
-
-    private void updateProductVariants(Product product, ExtraUpdateList extraProductVariantList) throws IOException {
-        List<Long> validIds = product.getProVarList().stream()
-                .map(ProVar::getId)
-                .collect(Collectors.toList());
-
-        List<Long> extraVariantIds = extraProductVariantList.getProductVariants().stream()
-                .filter(dto -> validIds.contains(dto.getId()))
-                .map(ExtraUpdate::getId)
-                .collect(Collectors.toList());
-
-        List<Long> idsToDelete = validIds.stream()
-                .filter(id -> !extraVariantIds.contains(id))
-                .collect(Collectors.toList());
-
-        deleteOldVariants(idsToDelete);
-        saveOrUpdateVariants(product, extraProductVariantList);
-    }
-
-    private void deleteOldVariants(List<Long> idsToDelete) {
-        for (Long id : idsToDelete) {
-            productVarRepo.findById(id).ifPresent(proVar -> {
-                proVar.getVars().forEach(varRepo::delete);
-                productVarRepo.delete(proVar);
-            });
-        }
-    }
-
-    private void saveOrUpdateVariants(Product product, ExtraUpdateList extraProductVariantList) throws IOException {
-        for (ExtraUpdate dto : extraProductVariantList.getProductVariants()) {
-            ProVar proVar;
-            if (dto.getId() == null) {
-                proVar = createNewVariant(dto, product);
-            } else {
-                proVar = updateExistingVariant(dto);
-            }
-            updateVariantValues(proVar, dto.getExtraValue());
-            productVarRepo.save(proVar);
-            product.getProVarList().add(proVar);
-        }
-    }
-
-    private ProVar createNewVariant(ExtraUpdate dto, Product product) throws IOException {
-        ProVar proVar = new ProVar();
-        proVar.setImage(s3Service.uploadToS3(dto.getFile(), "productVarImage"));
-        proVar.setPrice(new BigDecimal(dto.getPrice()));
-        proVar.setStock(Integer.valueOf((dto.getStock())));
-        proVar.setProduct(product);
-        return proVar;
-    }
-
-    private ProVar updateExistingVariant(ExtraUpdate dto) throws IOException {
-        ProVar proVar = productVarRepo.findById(dto.getId()).orElseThrow(() -> new RuntimeException("Variant not found"));
-        if (dto.getFile() != null) {
-            proVar.setImage(s3Service.uploadToS3(dto.getFile(), "productVarImage"));
-        } else if (dto.getImage() != null) {
-            proVar.setImage(dto.getImage());
-        }
-        proVar.setPrice(new BigDecimal(dto.getPrice()));
-        proVar.setStock(Integer.valueOf((dto.getStock())));
-        return proVar;
-    }
-
-    private void updateVariantValues(ProVar proVar, List<ExtraValueUpdate> extraValues) {
-        if (extraValues != null) {
-            extraValues.forEach(value -> {
-                Var var = value.getId() != null ? varRepo.findById(value.getId()).orElse(new Var()) : new Var();
-                var.setKey1(value.getKey1());
-                var.setValue(value.getValue());
-                varRepo.save(var);
-                proVar.addVar(var);
-            });
-        }
-    }
-
-    private String extractFilenameFromUrl2(String url) {
-        return url.substring(url.lastIndexOf('/') + 1);
-    }
-
 }
-
-
-
-//@PostMapping("/updateCountProduct/{id}")
-//public ResponseEntity<Product> updateCountProduct(@PathVariable("id") Long id) {
-//    Product product=productRepo.findById(id).get();
-//    if(product.getCountProduct()==null){
-//        CountProduct countProduct=new CountProduct();
-//        CountPerMonth countPerMonth=new CountPerMonth();
-//        countPerMonth.setCountPro(1l);
-//        countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
-//        countPerMonthRepo.save(countPerMonth);
-//        countProduct.addCountPerMonth(countPerMonth);
-//        countProductRepo.save(countProduct);
-//        product.addCountProduct(countProduct);
-//        productRepo.save(product);
-//        return ResponseEntity.ok(product);
-//    }
-//    else{
-//        CountProduct countProduct=product.getCountProduct();
-//        List<CountPerMonth> countPerMonths=countProduct.getCountPerMonths();
-//        for(CountPerMonth countPerMonth:countPerMonths){
-//            if(countPerMonth.getDateCount().equals(YearMonth.from(LocalDate.now()))){
-//                countPerMonth.setCountPro(countPerMonth.getCountPro()+1);
-//                countPerMonthRepo.save(countPerMonth);
-//                return ResponseEntity.ok(product);
-//            }
-//        }
-//
-//        CountPerMonth countPerMonth=new CountPerMonth();
-//        countPerMonth.setCountPro(1l);
-//        countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
-//        countPerMonthRepo.save(countPerMonth);
-//        countProduct.addCountPerMonth(countPerMonth);
-//        countProductRepo.save(countProduct);
-//        product.addCountProduct(countProduct);
-//        productRepo.save(product);
-//
-//        return ResponseEntity.ok(product);
-//    }
-//
-//}
-
-//@GetMapping("/top10ProductSearchPerMonth")
-//public ResponseEntity<List<Product>> top10ProductSearchPerMonth(@RequestParam("date") YearMonth date) {
-//    Pageable pageable = PageRequest.of(0, 10); // Trang đầu tiên, 10 kết quả
-//    List<Product>   products= productRepo.findTop10ProductsWithHighestCountPerMonth( date, pageable).getContent();
-//    return ResponseEntity.ok(products);
-//}
-
-//@GetMapping("/getTop10ProductByElastic")
-//public ResponseEntity<List<Map<String,String>>> getTop10ProductByElastic(@RequestParam("texts") String texts) {
-//    return ResponseEntity.ok(elasticsearchService.top10ProductCountSearch(texts));
-//}

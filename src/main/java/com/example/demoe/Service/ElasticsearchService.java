@@ -32,7 +32,7 @@ public class ElasticsearchService {
     @Autowired
     private DiscountRepo discountRepo;
     public List<Product> fetchDataFromElasticsearch() {
-        String indexName = "productsss"; // Thay thế bằng tên chỉ mục thực tế của bạn
+        String indexName = "products"; // Thay thế bằng tên chỉ mục thực tế của bạn
 
         SearchRequest searchRequest = new SearchRequest.Builder()
                 .index(indexName)
@@ -79,135 +79,6 @@ public class ElasticsearchService {
             }
         }
         return ids;
-    }
-    public List<Product> prefixProduct(String productNamePrefix) {
-        List<Product> results = new ArrayList<>();
-
-        try {
-            // Tạo SearchRequest
-            SearchRequest searchRequest = new SearchRequest.Builder()
-                    .index("productss") // Chỉ mục bạn cần tìm kiếm
-                    .query(q -> q
-                            .prefix(p -> p
-                                    .field("productName") // Trường cần tìm kiếm
-                                    .value(productNamePrefix) // Giá trị prefix
-                            )
-                    )
-                    .build();
-
-            // Thực hiện tìm kiếm
-            SearchResponse<Product> searchResponse = elasticsearchClient.search(searchRequest, Product.class);
-
-            // Xử lý kết quả tìm kiếm
-            for (var hit : searchResponse.hits().hits()) {
-                results.add(hit.source());
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return results;
-    }
-
-    public List<Map<String, String>> prefixProduct2(String productNamePrefix) {
-        List<Map<String, String>> results = new ArrayList<>();
-
-        try {
-            // Tạo SearchRequest
-            SearchRequest searchRequest = new SearchRequest.Builder()
-                    .index("productss") // Chỉ mục bạn cần tìm kiếm
-                    .query(q -> q
-                            .prefix(p -> p
-                                    .field("productName") // Trường cần tìm kiếm
-                                    .value(productNamePrefix) // Giá trị prefix
-                            )
-                    )
-                    .build();
-
-            // Thực hiện tìm kiếm
-            SearchResponse<Product> searchResponse = elasticsearchClient.search(searchRequest, Product.class);
-
-            // Xử lý kết quả tìm kiếm
-            for (var hit : searchResponse.hits().hits()) {
-                Map<String, String> product = new HashMap<>();
-                product.put("productName", hit.source().getProductName());
-                product.put("id", String.valueOf(hit.source().getId()));
-                results.add(product);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return results;
-    }
-
-    public List<Map<String, String>> top10ProductCountSearch(String productNamePrefix) {
-        List<Map<String, String>> results = new ArrayList<>();
-
-        try {
-            // Tạo SearchRequest
-            SearchRequest searchRequest = new SearchRequest.Builder()
-                    .index("autocomplete_index6") // Chỉ mục bạn cần tìm kiếm
-                    .query(q -> q
-                            .bool(b -> b
-                                    .must(m -> m
-                                            .matchPhrase(ma -> ma
-                                                    .field("productName")
-                                                    .query(productNamePrefix)
-                                                    
-                                            )
-                                    )
-                                    .must(m -> m
-                                            .nested(n -> n
-                                                    .path("countProduct.countPerMonths")
-                                                    .query(nq -> nq
-                                                            .bool(nb -> nb
-                                                                    .must(mb -> mb
-                                                                            .term(t -> t
-                                                                                    .field("countProduct.countPerMonths.dateCount")
-                                                                                    .value(2024)
-                                                                            )
-                                                                    )
-                                                                    .must(mb -> mb
-                                                                            .term(t -> t
-                                                                                    .field("countProduct.countPerMonths.dateCount")
-                                                                                    .value(8)
-                                                                            )
-                                                                    )
-                                                            )
-                                                    )
-                                            )
-                                    )
-                            )
-                    )
-                    .sort(s -> s
-                            .field(f -> f
-                                    .field("countProduct.countPerMonths.countPro")
-                                    .order(SortOrder.Asc)
-                                    .nested(n -> n
-                                            .path("countProduct.countPerMonths")
-                                    )
-                            )
-                    )
-                    .size(10) // Kích thước của kết quả trả về (ví dụ: top 10)
-                    .build();
-
-            // Thực hiện tìm kiếm
-            SearchResponse<Product> searchResponse = elasticsearchClient.search(searchRequest, Product.class);
-
-            // Xử lý kết quả tìm kiếm
-            for (var hit : searchResponse.hits().hits()) {
-                Map<String, String> product = new HashMap<>();
-                product.put("productName", hit.source().getProductName());
-                product.put("id", String.valueOf(hit.source().getId()));
-                results.add(product);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return results;
     }
 
     public List<Map<String, String>> recommentSearch(String productNamePrefix) {
@@ -320,8 +191,6 @@ public class ElasticsearchService {
                     }
                 }
                 products1.add(proDto);
-//                product.put("productName", hit.source().getProductName());
-//                product.put("id", String.valueOf(hit.source().getId()));
             }
         } catch (IOException e) {
             e.printStackTrace();

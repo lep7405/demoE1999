@@ -13,7 +13,7 @@ import java.util.Optional;
 public class UserService {
 
     @Autowired
-    private UserRepo userRepo; // Assuming you have a UserRepository to interact with your database
+    private UserRepo userRepo;
 
     public Optional<User> getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

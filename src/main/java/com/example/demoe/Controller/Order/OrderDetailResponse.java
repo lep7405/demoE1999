@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @Builder
 public class OrderDetailResponse {
-    private List<OrderPaidItemDto> orderPaidItemDtos = new ArrayList<>();
+    private List<OrderPaidItemDto> orderPaidItemDtos ;
     private Shipping shipping;
 
 }
