@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.security.core.parameters.P;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -15,16 +16,16 @@ public interface DiscountRepo extends JpaRepository<Discount,Long> {
             + "((d.startDate <= :startDate AND d.endDate >= :startDate) OR "
             + "(d.startDate <= :endDate AND d.endDate >= :endDate))")
 
-    List<Discount> findDiscountsByProductAndDateRangeAndIsActive(@Param("startDate") LocalDate startDate,
-                                                                 @Param("endDate") LocalDate endDate,
+    List<Discount> findDiscountsByProductAndDateRangeAndIsActive(@Param("startDate") LocalDateTime startDate,
+                                                                 @Param("endDate") LocalDateTime endDate,
                                                                  @Param("isActive") boolean isActive,
                                                                  @Param("productId") Long productId);
 
     @Query("SELECT d FROM Discount d  WHERE d.level=2 AND d.startDate <= :startDate "
             + "AND d.endDate >= :endDate "
             + "AND d.isActive = :isActive")
-    List<Discount> findDiscounts(@Param("startDate") LocalDate startDate,
-                                                                 @Param("endDate") LocalDate endDate,
+    List<Discount> findDiscounts(@Param("startDate") LocalDateTime startDate,
+                                                                 @Param("endDate") LocalDateTime endDate,
                                                                  @Param("isActive") boolean isActive
                                                                 );
     //getAllProduct
@@ -32,7 +33,7 @@ public interface DiscountRepo extends JpaRepository<Discount,Long> {
             + "AND d.endDate >= :startDate "
             + "AND d.isActive = true"
     )
-    List<Discount> findDiscounts1(@Param("startDate") LocalDate startDate, @Param("productId") Long productId);
+    List<Discount> findDiscounts1(@Param("startDate") LocalDateTime startDate, @Param("productId") Long productId);
 
     @Query("SELECT d FROM Discount d WHERE d.level = :level "
 

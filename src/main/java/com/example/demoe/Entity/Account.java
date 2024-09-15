@@ -3,10 +3,12 @@ package com.example.demoe.Entity;
 import com.example.demoe.Entity.ROLE.Role;
 import com.example.demoe.Entity.TOKEN.Token;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,9 +23,10 @@ public class Account implements UserDetails {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     private String email;
+    @NotNull(message = "Name may not be null")
     private String password;
 
-    @OneToMany(mappedBy = "account",fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "account",fetch = FetchType.LAZY)
     private List<Token> tokenList;
     public void addToken(Token token){
         if(tokenList==null){

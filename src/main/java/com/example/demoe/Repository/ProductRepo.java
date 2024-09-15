@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -35,5 +36,5 @@ public interface ProductRepo extends JpaRepository<Product, Long> {
             + "AND d.endDate >= :startDate "
             + "AND d.isActive = true"
     )
-    List<Product> findDiscounts1(@Param("startDate") LocalDate startDate,Pageable pageable);
+    List<Product> findDiscounts1(@Param("startDate") LocalDateTime startDate, Pageable pageable);
 }

@@ -2,8 +2,6 @@ package com.example.demoe.Controller.ProductController.CreateProductRequest;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.GeneratorType;
-import org.hibernate.annotations.SecondaryRow;
 
 @Getter
 @Setter

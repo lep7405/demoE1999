@@ -1,6 +1,8 @@
 package com.example.demoe.Entity.Address;
 
 import com.example.demoe.Entity.Order.Order1;
+//import com.example.demoe.Entity.Shipping.Shipping;
+import com.example.demoe.Entity.Shipping.Shipping;
 import com.example.demoe.Entity.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -29,8 +31,14 @@ public class Address {
     @JsonIgnore
     private User user;
 
-    @OneToOne()
+    @OneToOne
     @JoinColumn(name = "order1_id")
     @JsonIgnore
     private Order1 order1;
+
+
+//    @OneToOne
+//    @JoinColumn(name = "shipping_id")
+//    @JsonIgnore
+//    private Shipping shipping;
 }

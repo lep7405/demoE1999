@@ -52,7 +52,7 @@ public class OrderService {
             order1ItemRepo.save(order1Item);
             product.addOrder1Item(order1Item);
             productRepo.save(product);
-            order1Item.addPro(productVar);
+
             order1ItemRepo.save(order1Item);
             order1.addOrder1Item(order1Item);
             order1Repo.save(order1);

@@ -1,6 +1,7 @@
 package com.example.demoe.Controller.Admin;
 
 import com.example.demoe.Config.JwtService1;
+import com.example.demoe.Controller.UserControlelr.UserRequest;
 import com.example.demoe.Controller.UserControlelr.userResData;
 import com.example.demoe.Dto.Product.ProductDto;
 import com.example.demoe.Entity.Admin;
@@ -13,6 +14,7 @@ import com.example.demoe.Repository.TokenRepository;
 import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,50 +41,42 @@ public class AdminController {
     private AdminRepo adminRepo;
     @Autowired
     private TokenRepository tokenRepository;
-    @PostMapping("/login")
-    public ResponseEntity<userResData> login(@RequestBody Admin admin) throws ServletException {
+    @PostMapping("/Login")
+    public ResponseEntity<userResData> login(@RequestBody AdminRequest adminRequest) throws ServletException {
+        System.out.println("hello1");
+        Admin admin=adminRequest.getAdmin();
+        String deviceId=adminRequest.getDeviceId();
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(admin.getEmail(), admin.getPassword()));
         } catch (AuthenticationException ex) {
-            // Xử lý lỗi xác thực (sai tên người dùng hoặc mật khẩu)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new userResData("Invalid username or password"));
         }
-
-        // Xử lý thành công đăng nhập và tạo token
-        Optional<Admin> admin1 = adminRepo.findByEmail(admin.getEmail());
-        if(admin1.isPresent()){
-
-            String token;
-            String refreshToken;
-            try {
-                token = jwtService1.generateToken(admin1.get(), null);
-                refreshToken=jwtService1.generateRefreshToken(admin1.get());
-            } catch (NoSuchAlgorithmException e) {
-                throw new ServletException("Token generation failed", e);
-            }
-            revol(admin1.get());
-            Token tokenEntity = Token.builder()
-                    .account(admin1.get())
-                    .token(token)
-                    .tokenType(TokenType.BEARER)
-                    .exprired(false)
-                    .revolked(false)
-                    .refreshToken(refreshToken)
-                    .device( singleton.getValue())
-                    .build();
-            tokenRepository.save(tokenEntity);
-
-            admin1.get().addToken(tokenEntity);
-
-            return ResponseEntity.ok(new userResData(admin1.get().getId(),admin1.get().getEmail(),tokenEntity.getToken(),tokenEntity.getRefreshToken(),"loggin successful"));
+        Admin admin1 = adminRepo.findByEmail(admin.getEmail()) .orElseThrow(() -> new ResourceNotFoundException("Admin not found with email: " + admin.getEmail()));
+        String token;
+        String refreshToken;
+        try {
+            token = jwtService1.generateToken(admin1, null);
+            refreshToken=jwtService1.generateRefreshToken(admin1);
+        } catch (NoSuchAlgorithmException e) {
+            throw new ServletException("Token generation failed", e);
         }
-        else{
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new userResData("Invalid username or password"));
-        }
+        revol(admin1,deviceId);
+        Token tokenEntity = Token.builder()
+                .account(admin1)
+                .token(token)
+                .tokenType(TokenType.BEARER)
+                .exprired(false)
+                .revolked(false)
+                .refreshToken(refreshToken)
+                .device(deviceId)
+                .build();
+        tokenRepository.save(tokenEntity);
+        admin1.addToken(tokenEntity);
+        return ResponseEntity.ok(new userResData(admin1.getId(),admin1.getEmail(),tokenEntity.getToken(),tokenEntity.getRefreshToken(),"loggin successful"));
     }
 
-    private void revol(Admin admin){
-        List<Token> tokenList=tokenRepository.findAllByUserId(admin.getId(),singleton.getValue());
+    private void revol(Admin admin,String deviceId){
+        List<Token> tokenList=tokenRepository.findAllByUserId(admin.getId(),deviceId);
         if(tokenList==null){
             return;
         }
@@ -99,10 +93,12 @@ public class AdminController {
 
     @GetMapping("/getInfoAdmin")
     public Admin getInfoAdmin(){
-        Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
-        Admin admin = (Admin) authentication.getPrincipal();
-        String email=admin.getEmail();
-        Optional<Admin> admin1=adminRepo.findByEmail(email);
+//        Authentication authentication= SecurityContextHolder.getContext().getAuthentication();
+//        Admin admin = (Admin) authentication.getPrincipal();
+//        String email=admin.getEmail();
+//        Optional<Admin> admin1=adminRepo.findByEmail(email);
+
+        Optional<Admin> admin1=adminRepo.findById(2L);
 
         return admin1.get();
     }

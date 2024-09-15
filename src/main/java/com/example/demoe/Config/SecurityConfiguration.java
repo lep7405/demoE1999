@@ -69,27 +69,27 @@ public class SecurityConfiguration {
     @Autowired
     private AddressRepo addressRepo;
     private static final String[] Lists = {
-            "/sso/Register",
-            "/sso/getUser/**",
-            "/sso/**",
+            "/user/Register",
+            "/user/Login",
             "/login/oauth2/code/google",
-            "/sso/login",
+            "/user/refreshToken",
             "/login", "/oauth2/**",
             "/product/getProduct/**",
             "/product/getAllProduct",
-            "/admin/login",
+            "/admin/Login",
             "/product/test-redis",
             "/product/testPro/**",
             "/product/**",
             "/cart/clear",
             "/payment/**",
-
             "/order/getOrder1/**",
-            "/order/getOrder1Item/**"
+            "/order/getOrder1Item/**",
+            "/shipping/getShippingById/**",
+            "/admin/getInfoAdmin"
 
     };
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
         http
 
                 .csrf(AbstractHttpConfigurer::disable)
@@ -111,7 +111,9 @@ public class SecurityConfiguration {
 
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthFilter1, UsernamePasswordAuthenticationFilter.class)
-
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // Use the custom entry point
+                );
         ;
         return http.build();
     }

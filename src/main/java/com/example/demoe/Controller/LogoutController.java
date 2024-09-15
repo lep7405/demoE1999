@@ -14,10 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,8 +31,8 @@ public class LogoutController {
     private TokenRepository tokenRepository;
     @Autowired
     private AdminRepo adminRepo;
-    @GetMapping("out")
-    public ResponseEntity<String> logout(){
+    @GetMapping("/{fingerId}")
+    public ResponseEntity<String> logout(@PathVariable("fingerId") String fingerId){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if(authentication!=null){
             logger.info("authentication khac null");
@@ -48,7 +45,7 @@ public class LogoutController {
         Optional<Admin> admin1=adminRepo.findByEmail(name);
         if (user1.isPresent()) {
             User user = user1.get();
-            List<Token> userTokens = tokenRepository.findAllByUserId(user.getId(),singleton.getValue());
+            List<Token> userTokens = tokenRepository.findAllByUserId(user.getId(),fingerId);
             userTokens.forEach(token -> {
                 token.setRevolked(true);
                 token.setExprired(true);
@@ -57,7 +54,44 @@ public class LogoutController {
         } else {
             if(admin1.isPresent()){
                 Admin admin = admin1.get();
-                List<Token> adminTokens = tokenRepository.findAllByUserId(admin.getId(),singleton.getValue());
+                List<Token> adminTokens = tokenRepository.findAllByUserId(admin.getId(),fingerId);
+                adminTokens.forEach(token -> {
+                    token.setRevolked(true);
+                    token.setExprired(true);
+                });
+                tokenRepository.saveAll(adminTokens);
+            }
+            else{
+                logger.warn("User or seller not found: {}", name);
+            }
+        }
+        return ResponseEntity.ok("Logout successful");
+    }
+
+    @GetMapping("/logoutAllOther/{fingerId}")
+    public ResponseEntity<String> logoutAllOther(@PathVariable("fingerId") String fingerId){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if(authentication!=null){
+            logger.info("authentication khac null");
+        }
+        String name = authentication.getName();
+
+        logger.info("11111111111111111111"+name);
+//        String username = user.getUsername();
+        Optional<User> user1=userRepository.findByEmail(name);
+        Optional<Admin> admin1=adminRepo.findByEmail(name);
+        if (user1.isPresent()) {
+            User user = user1.get();
+            List<Token> userTokens = tokenRepository.findAllByLogOutOther(user.getId(),fingerId);
+            userTokens.forEach(token -> {
+                token.setRevolked(true);
+                token.setExprired(true);
+            });
+            tokenRepository.saveAll(userTokens);
+        } else {
+            if(admin1.isPresent()){
+                Admin admin = admin1.get();
+                List<Token> adminTokens = tokenRepository.findAllByLogOutOther(admin.getId(),fingerId);
                 adminTokens.forEach(token -> {
                     token.setRevolked(true);
                     token.setExprired(true);

@@ -20,9 +20,9 @@ import java.util.*;
 
 @Service
 public class JwtService1 {
-    @Value("${application.security.jwt.expiration}00")
+    @Value("60")
     private long jwtExpiration;
-    @Value("${application.security.jwt.refresh-token.expiration}000")
+    @Value("18000")
     private long refreshExpiration;
 //    @Value("MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA564/5dxnmKt2FIsOYVbbTj5gM8I2mn7nqf1NoB0TAYP9/fpaeaOJT146r2LTyk1RpBzfDSp3Ya0ilARzS/V5/Ty1b+IdNAOarWAW6VKHiGR9VQtKNfnoVZ7Sloqj5MM8G3Vdrlzt9HVbHJJD0qgs56ZpIdqVQL+fOl+EQPLV+FZ9SRShv+cm7yMatPZWV2g8SFyDK2jQma4oiMBP1g8gVaBkoRZjMs0JvGIUwk4OUsjNht7jg+gvF9ayJ0orHuFaK+DBcb9zTayv5MJEFJWE9Zdsv8di1jcUvRboIcmReEx48GTzoPu3zfu3ePcH6LmTy2FphVknAHhwrJUbF9EVuQIDAQAB")
 //    private String publicKey;
@@ -81,22 +81,20 @@ private static final String PUBLIC_KEY_PROPERTY = "rsa.public.key";
             // Xử lý trường hợp tham số claims là null tại đây, ví dụ:
             claims = new HashMap<>(); // hoặc bất kỳ xử lý nào khác
         }
-//        System.out.println("45"+keyPair.getPrivate());
-//        System.out.println("46"+keyPair.getPublic());
-        long expiration1 = 24*7 * 60 * 60 * 1000;
+        long expiration1 = 60;
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis()+expiration1))
+                .setExpiration(new Date(System.currentTimeMillis()+expiration))
                 .signWith(keyPair.getPrivate())
                 .compact();
     }
     public String generateToken(UserDetails userDetails, Map<String,Object> claims) throws NoSuchAlgorithmException {
-        return buildToken(userDetails,claims,jwtExpiration);
+        return buildToken(userDetails,claims,(long) 60*1000*60*7);
     };
     public String generateRefreshToken(UserDetails userDetails) throws NoSuchAlgorithmException {
-        return buildToken(userDetails,null,refreshExpiration);
+        return buildToken(userDetails,null,(long) 18000*1000*60);
     }
     //giải token
     public Claims extraToken(String token) throws NoSuchAlgorithmException {

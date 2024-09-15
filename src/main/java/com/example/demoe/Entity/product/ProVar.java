@@ -43,10 +43,27 @@ public class ProVar {
         var.setProVar(this);
     }
 
-    @OneToOne(mappedBy = "proVar")
+    @OneToMany(mappedBy = "proVar")
     @JsonIgnore
-    private CartItem cartItem;
-    @OneToOne(mappedBy = "proVar")
+    private List<CartItem> cartItemList;
+
+    public void addCartItem(CartItem cartItem) {
+        if (cartItemList == null) {
+            cartItemList = new ArrayList<>();
+        }
+        cartItemList.add(cartItem);
+        cartItem.setProVar(this);
+    }
+
+    @OneToMany(mappedBy = "proVar")
     @JsonIgnore
-    private Order1Item order1Item;
+    private List<Order1Item> order1ItemList;
+
+    public void addOrder1Item(Order1Item order1Item) {
+        if (order1ItemList == null) {
+            order1ItemList = new ArrayList<>();
+        }
+        order1ItemList.add(order1Item);
+        order1Item.setProVar(this);
+    }
 }

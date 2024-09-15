@@ -1,7 +1,6 @@
 package com.example.demoe.Entity.cart;
 
 import com.example.demoe.Entity.User;
-import com.example.demoe.Entity.product.ProVar;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,7 +21,8 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @OneToOne(mappedBy = "cart")
+    @OneToOne()
+    @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
 

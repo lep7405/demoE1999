@@ -8,6 +8,7 @@ import com.example.demoe.Dto.Product.ProductDto;
 import com.example.demoe.Entity.Admin;
 import com.example.demoe.Entity.product.Discount;
 import com.example.demoe.Entity.product.Product;
+import com.example.demoe.Helper.JedisSingleton;
 import com.example.demoe.Repository.AdminRepo;
 import com.example.demoe.Repository.DiscountRepo;
 import com.example.demoe.Repository.ProductRepo;
@@ -20,7 +21,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
+import redis.clients.jedis.UnifiedJedis;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +37,7 @@ public class DiscountController {
     private ProductRepo productRepo;
     @Autowired
     private AdminRepo adminRepo;
-    //cái này là discount cho 1 loạt,tạo xong có áp dụng luôn chưa
+    //cái này là discount cho 1 loạt,tạo xong có áp dụng luôn rồi áp dụng luôn cho toàn bộ
     @PostMapping("/create")
     public ResponseEntity<DiscountDtoMessage> createDiscount(@RequestBody Discount discount) {
         System.out.println("discount"+discount.getDiscountValue());
@@ -47,12 +50,17 @@ public class DiscountController {
             return ResponseEntity.ok(new DiscountDtoMessage("not found admin"));
         }
         Hibernate.initialize(admin1.get().getDiscountList());
+
+        //Nếu cái discount đang active của product >=1 thì không được add thêm nữa
         List<Discount> discount1=discountRepo.findDiscounts(discount.getStartDate(),discount.getEndDate(),true);
         if(discount1.size()>=1){
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new DiscountDtoMessage("failed due to duplicate date"));
         }
+        //discount này mặc định gửi lên là nó đã có level 2 rồi , xong mỗi cái product add discount cho cái discount lv2 này là active
+        //còn cái discount lv1 thì setIsActive là false
         else{
+            UnifiedJedis jedis = JedisSingleton.getInstance();
 //            discount.setLevel(2);
             discountRepo.save(discount);
             admin1.get().addDiscount(discount);
@@ -76,6 +84,8 @@ public class DiscountController {
 //    @PostMapping
     //cái này là discoun cho tưng product riêng lẻ
     //check thời gian tạo nữa không nó bị trùng
+
+    //Cái này chỉ là create Discount cho 1 product thôi
     @PostMapping("/create1")
         public ResponseEntity<DiscountDtoMessage> createDiscount(@RequestBody CreatepPerDiscountRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -117,7 +127,16 @@ public class DiscountController {
     @CrossOrigin(origins = "http://localhost:5174")
     @GetMapping("/getAllDiscountLevel2")
     public ResponseEntity<List<Discount>> getAllDiscountLevel2() {
+        System.out.println("hello1");
+        System.out.println("hello1");
         List<Discount> discounts = discountRepo.findAllByLevel(2);
+        for(Discount discount:discounts){
+            if(discount.getStartDate().isBefore(LocalDateTime.now())||discount.getEndDate().isAfter(LocalDateTime.now())){
+                discount.setIsActive(false);
+                discountRepo.save(discount);
+            }
+        }
+
         return ResponseEntity.ok(discounts);
     }
 

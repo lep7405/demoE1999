@@ -31,4 +31,9 @@ public class UserDTO {
         this.email = email;
         this.token = token;
     }
+    public UserDTO(String token, String refreshToken){
+        this.token=token;
+        this.refreshToken=refreshToken;
+    }
+
 }

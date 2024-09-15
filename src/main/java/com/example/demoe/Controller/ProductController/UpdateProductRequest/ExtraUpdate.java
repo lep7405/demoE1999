@@ -1,6 +1,5 @@
 package com.example.demoe.Controller.ProductController.UpdateProductRequest;
 
-import com.example.demoe.Controller.ProductController.UpdateProductRequest.ExtraValueUpdate;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;

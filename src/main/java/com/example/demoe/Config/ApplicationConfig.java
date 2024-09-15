@@ -77,6 +77,7 @@ public class ApplicationConfig {
         logger.info("pro6"+authProvider.getUserCache());
         return authProvider;
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

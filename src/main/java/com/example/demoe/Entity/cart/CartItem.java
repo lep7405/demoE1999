@@ -21,19 +21,19 @@ public class CartItem {
     private Long id;
     private Long productId;
     private Short quantity;
-    private BigDecimal discountValue;
+//    private BigDecimal discountValue;
     private String productName;
     private Integer max1Buy;
 //    private BigDecimal price;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "pro_var_id")
     private ProVar proVar;
 
-    public void addPro(ProVar proVar) {
-        this.proVar = proVar;
-        proVar.setCartItem(this);
-    }
+//    public void addPro(ProVar proVar) {
+//        this.proVar = proVar;
+//        proVar.setCartItem(this);
+//    }
 
     @ManyToOne
     @JoinColumn(name = "cart_id")
@@ -41,11 +41,11 @@ public class CartItem {
     private Cart cart;
 
 
-//    @OneToOne(mappedBy = "cartItem")
-//    private Discount discount;
-//
-//    public void addDiscount(Discount discount) {
-//        this.discount = discount;
-//        discount.setCartItem(this);
-//    }
+    @OneToOne(mappedBy = "cartItem")
+    private Discount discount;
+
+    public void addDiscount(Discount discount) {
+        this.discount = discount;
+        discount.setCartItem(this);
+    }
 }

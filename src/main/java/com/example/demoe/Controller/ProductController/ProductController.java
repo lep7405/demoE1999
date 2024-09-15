@@ -1,32 +1,41 @@
 package com.example.demoe.Controller.ProductController;
 
-import com.example.demoe.Controller.Discount.DiscountController;
 import com.example.demoe.Controller.ProductController.CreateProductRequest.ExtraProductVariant;
 import com.example.demoe.Controller.ProductController.CreateProductRequest.ExtraProductVariantList;
 import com.example.demoe.Controller.ProductController.UpdateProductRequest.ExtraUpdate;
 import com.example.demoe.Controller.ProductController.UpdateProductRequest.ExtraUpdateList;
 import com.example.demoe.Controller.ProductController.UpdateProductRequest.ExtraValueUpdate;
+import com.example.demoe.Dto.CommentDto;
+import com.example.demoe.Dto.OrderPaid.OrderPaidDto;
+import com.example.demoe.Dto.OrderPaid.OrderPaidItemDto;
 import com.example.demoe.Dto.Product.ProDto;
 import com.example.demoe.Dto.Product.ProductDetailDto;
 import com.example.demoe.Dto.Product.ProductDto;
 import com.example.demoe.Dto.Product.ProductRanDom.ListProDto;
 import com.example.demoe.Dto.Product.ProductRanDom.ProDto1;
 import com.example.demoe.Entity.Admin;
+import com.example.demoe.Entity.Order.OrderPaid;
+import com.example.demoe.Entity.User;
 import com.example.demoe.Entity.product.*;
 import com.example.demoe.Repository.*;
+import com.example.demoe.Service.AdminService;
 import com.example.demoe.Service.ElasticsearchService;
-//import com.example.demoe.Service.ProductService;
 import com.example.demoe.Service.S3Service;
+import com.example.demoe.Service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 
 
 import java.io.IOException;
@@ -36,9 +45,11 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 
@@ -58,8 +69,8 @@ public class ProductController {
     private AdminRepo adminRepo;
     @Autowired
     private S3Service s3Service;
-//    @Autowired
-//    private ProductService productService;
+    @Autowired
+    private UserService userService;
     @Autowired
     private DiscountRepo discountRepo;
     @Autowired
@@ -68,26 +79,26 @@ public class ProductController {
     private CountProductRepo countProductRepo;
     @Autowired
     private CountPerMonthRepo countPerMonthRepo;
+    @Autowired
+    private ReviewRepo reviewRepo;
+    @Autowired
+    private OrderPaidRepo orderPaidRepo;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private UserRepo userRepo;
+    @Autowired
+    private AdminService adminService;
 
-    @GetMapping("/getProduct/{id}")
-    public Product getProduct() {
-        return productRepo.findById(1L).get();
-    }
 
-    @GetMapping("/test")
-    public String test() {
-        return "test success";
-    }
-
-
-    @PostMapping("/testInput")
+    @PostMapping("/createProduct")
     public ResponseEntity<ProductDto> uploadProduct(
             @ModelAttribute ExtraProductVariantList extraProductVariantList
     ) throws IOException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Admin admin = (Admin) authentication.getPrincipal();
-        String email = admin.getEmail();
-        Optional<Admin> admin1 = adminRepo.findByEmail(email);
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Admin admin = (Admin) authentication.getPrincipal();
+//        String email = admin.getEmail();
+        Optional<Admin> admin1 =adminService.getAuthenticatedAdmin();
         if (!admin1.isPresent()) {
             return ResponseEntity.ok(new ProductDto("not found admin"));
         }
@@ -159,145 +170,26 @@ public class ProductController {
 
         return ResponseEntity.ok(new ProductDto(product, "success"));
     }
-
-    @GetMapping("/testProvar/{id}")
-    public ResponseEntity<ProVar> testProvar(@PathVariable("id") Long id) {
-        ProVar proVar = productVarRepo.findById(id).get();
-        return ResponseEntity.ok(proVar);
-    }
-    @CrossOrigin(origins = "http://localhost:5173")
-    @GetMapping("/testPro/{id}")
-    public ResponseEntity<Product> testPro(@PathVariable("id") Long id) {
-        Product pro = productRepo.findById(id).get();
-        List<Discount> discounts=new ArrayList<>();
-        Product product=Product.builder()
-                .id(pro.getId())
-                .productName(pro.getProductName())
-                .description(pro.getDescription())
-                .active(pro.getActive())
-                .max1Buy(pro.getMax1Buy())
-
-                .categories(pro.getCategories())
-                .proVarList(pro.getProVarList())
-                .build();
-        List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),product.getId());
-        Optional<Discount> discountlv2 = discountList.stream()
-                .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
-                .findFirst();
-        Optional<Discount> discountlv1 = discountList.stream()
-                .filter(d -> d.getLevel() != null && d.getLevel() == 1&&d.getIsActive()==true)
-                .findFirst();
-        if(discountlv2.isPresent()){
-            discounts.add(discountlv2.get());
-            product.setDiscounts(discounts);
-        }
-        else{
-            if(discountlv1.isPresent()){
-                discounts.add(discountlv1.get());
-                product.setDiscounts(discounts);
-            }
-        }
-
-        List<String> img=new ArrayList<>();
-        for(String s:pro.getImages()){
-            String s1= s3Service.getPresignedUrl(s);
-            img.add(s1);
-        }
-        product.setImages(img);
-        for(ProVar proVar:pro.getProVarList()){
-                String s1= s3Service.getPresignedUrl(proVar.getImage());
-            proVar.setImage(s1);
-        }
-        return ResponseEntity.ok(product);
-    }
-
-    @GetMapping("/getAllCategory")
-    public ResponseEntity<List<Category>> getAllCategory() {
-        List<Category> categories = categoryRepo.findAll();
-        return ResponseEntity.ok(categories);
-    }
-
-    @GetMapping("/getAllProduct")
-    public ResponseEntity<ProDto> getAllProduct(@RequestParam("currentPage") int currentPage, @RequestParam("pageSize") int pageSize) {
-        {
-            Pageable pageable = PageRequest.of(currentPage, pageSize);
-            Page<Product> productPage = productRepo.findAll(pageable);
-
-            List<Product> products = productRepo.findAll();//?
-            Short totalPage = (short) ((short) products.size()/pageSize +1);
-            if (products.size() == 0) {
-                return ResponseEntity.ok((new ProDto("Total product : 0")));
-            }
-            List<ProductDetailDto> products1 = new ArrayList<>();
-            for (Product product : productPage) {
-                ProductDetailDto productDetailDto = new ProductDetailDto();
-                productDetailDto.setId(product.getId());
-                productDetailDto.setProductName(product.getProductName());
-                productDetailDto.setActive(product.getActive());
-                productDetailDto.setPrice(product.getProVarList().getFirst().getPrice());
-                if (product.getDiscounts().size() > 0) {
-                    List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),product.getId());
-                   productDetailDto.setDiscountList(discountList);
-                }
-                productDetailDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
-                Integer total = 0;
-                Short totalVariant = 0;
-                for (ProVar proVar : product.getProVarList()) {
-                    total += proVar.getStock().intValue();
-                    for (Var var : proVar.getVars()) {
-                        totalVariant++;
-                    }
-                }
-
-                productDetailDto.setTotalStock(total);
-                productDetailDto.setTotalVariant(totalVariant);
-
-                products1.add(productDetailDto);
-            }
-
-            return ResponseEntity.ok(new ProDto("success", (short) 10, products1));
-        }
-    }
-
-//    @GetMapping("/test-redis")
-//    public String testRedis() {
-//        productService.loadProductsToRedisWithPipeline();
-//        return "successFul";
-//    }
-//    @GetMapping("/test-redis-getAllProduct")
-//    public ResponseEntity<List<Product>> testRedisGetAllProduct() {
-//        List<Product> productList=productService.getProductsFromRedis();
-//        return ResponseEntity.ok(productList);
-//    }
-
     @PostMapping("/updateProduct")
     public ResponseEntity<String> updateProduct(
             @ModelAttribute ExtraUpdateList extraProductVariantList
     ) throws IOException {
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        Admin admin = (Admin) authentication.getPrincipal();
-//        String email = admin.getEmail();
-//        Optional<Admin> admin1 = adminRepo.findByEmail(email);
-//        if (!admin1.isPresent()) {
-//            return ResponseEntity.ok(new ProductDto("not found admin"));
+        Product product=productRepo.findById(extraProductVariantList.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with email: " + extraProductVariantList.getId()));
+        Product product1=productRepo.findByProductName(extraProductVariantList.getProductName())
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with productName: " + extraProductVariantList.getProductName()));
+//        if(product1.isPresent()){
+//
 //        }
-        Optional<Product> product=productRepo.findById(extraProductVariantList.getId());
-        if(!product.isPresent()){
-
-        }
-        Optional<Product> product1=productRepo.findByProductName(extraProductVariantList.getProductName());
-        if(product1.isPresent()){
-
-        }
 
         Optional<Category> category = categoryRepo.findById(Long.valueOf(extraProductVariantList.getCategoryId()));
 
-        product.get().setProductName(extraProductVariantList.getProductName());
-        product.get().setDescription(extraProductVariantList.getDescription());
-        product.get().setMax1Buy(extraProductVariantList.getMax1Buy());
-        product.get().setActive(extraProductVariantList.getActive());
-        product.get().setCategories(new ArrayList<>());
-        product.get().addCategory(category.get());
+        product.setProductName(extraProductVariantList.getProductName());
+        product.setDescription(extraProductVariantList.getDescription());
+        product.setMax1Buy(extraProductVariantList.getMax1Buy());
+        product.setActive(extraProductVariantList.getActive());
+        product.setCategories(new ArrayList<>());
+        product.addCategory(category.get());
 
         MultipartFile[] multipartFiles = extraProductVariantList.getFiles();
         List<String > img=new ArrayList<>(); //cái list filename mới
@@ -315,7 +207,7 @@ public class ProductController {
         System.out.println("id" + extraProductVariantList.getId());
 
 
-        List<String> imgs=product.get().getImages();
+        List<String> imgs=product.getImages();
         for (String image : imgs) {
 
             System.out.println("Imgs name: " + image);
@@ -353,12 +245,12 @@ public class ProductController {
         // Tạo danh sách mới để chứa kết quả gộp
         List<String> mergedList = new ArrayList<>(img); // Sao chép các phần tử của img vào mergedList
         mergedList.addAll(common);
-        product.get().setImages(mergedList);
-        productRepo.save(product.get());
+        product.setImages(mergedList);
+        productRepo.save(product);
 
 
         //product có 1 tập hợp id của proVar , thiếu cái nào gửi lên , delete cái đó luôn
-        List<ProVar> proVarList=product.get().getProVarList();
+        List<ProVar> proVarList=product.getProVarList();
         List<Long> validIds = proVarList.stream()
                 .map(ProVar::getId)
                 .collect(Collectors.toList());
@@ -392,7 +284,7 @@ public class ProductController {
                 proVar.setImage(s3Service.uploadToS3(productVariantDTO.getFile(), "productVarImage"));
                 proVar.setPrice(new BigDecimal(productVariantDTO.getPrice()));
                 proVar.setStock(Integer.valueOf((productVariantDTO.getStock())));
-                proVar.setProduct(product.get());
+                proVar.setProduct(product);
                 productVarRepo.save(proVar);
                 for(ExtraValueUpdate v:productVariantDTO.getExtraValue()){
                     Var var=new Var();
@@ -402,8 +294,8 @@ public class ProductController {
                     proVar.getVars().add(var);
                 }
                 productVarRepo.save(proVar);
-                product.get().getProVarList().add(proVar);
-                productRepo.save(product.get());
+                product.getProVarList().add(proVar);
+                productRepo.save(product);
             }
             ProVar proVar = productVarRepo.findById(productVariantDTO.getId()).get();
             System.out.println("Id: " + productVariantDTO.getId());
@@ -457,6 +349,231 @@ public class ProductController {
         return ResponseEntity.ok("success");
     }
 
+    @GetMapping("/get5ProductSale")
+    public ResponseEntity<ListProDto> get5ProductSale() {
+        List<Product> products = productRepo.findDiscounts1((LocalDateTime.now()),PageRequest.of(0, 7));
+        List<ProDto1> products1 = new ArrayList<>();
+        for (Product product : products) {
+            ProDto1 proDto=new ProDto1();
+
+            proDto.setId(product.getId());
+            proDto.setProductName(product.getProductName());
+            proDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
+            BigDecimal minPrice = product.getProVarList().stream()
+                    .map(ProVar::getPrice)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO); // Giá trị mặc định nếu danh sách rỗng
+
+            proDto.setPrice(minPrice);
+
+            proDto.setNumberOfStars(product.getRateCount());
+            proDto.setAverageStars(product.getAverageRate());
+
+            List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),product.getId());
+            Optional<Discount> discountlv2 = discountList.stream()
+                    .filter(d -> d.getLevel() != null && d.getLevel() == 2)
+                    .findFirst();
+            Optional<Discount> discountlv1 = discountList.stream()
+                    .filter(d -> d.getLevel() != null && d.getLevel() == 1)
+                    .findFirst();
+            if(discountlv2.isPresent()){
+                proDto.setDiscount(discountlv2.get());
+            }
+            else{
+                if(discountlv1.isPresent()){
+                    proDto.setDiscount(discountlv1.get());
+                }
+            }
+            products1.add(proDto);
+        }
+
+
+        // Tính số lượng trang tổng cộng
+
+        return ResponseEntity.ok(new ListProDto(products1,0,"success"));
+    }
+    @GetMapping("/getAllProductRandom")
+    public ResponseEntity<ListProDto> getAllProductRandom(@RequestParam("currentPage") int currentPage) {
+        {
+            List<Product> allProducts = new ArrayList<>();
+
+            for (int i = 0; i <= currentPage; i++) {
+                Pageable pageable = PageRequest.of(i, 1);
+                Page<Product> productPage = productRepo.findAll(pageable);
+                allProducts.addAll(productPage.getContent());
+            }
+
+            List<ProDto1> products1 = new ArrayList<>();
+            for (Product product : allProducts) {
+                ProDto1 proDto=new ProDto1();
+
+                proDto.setId(product.getId());
+                proDto.setProductName(product.getProductName());
+                proDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
+                BigDecimal minPrice = product.getProVarList().stream()
+                        .map(ProVar::getPrice)
+                        .min(BigDecimal::compareTo)
+                        .orElse(BigDecimal.ZERO); // Giá trị mặc định nếu danh sách rỗng
+
+                proDto.setPrice(minPrice);
+
+                proDto.setNumberOfStars(product.getRateCount());
+                proDto.setAverageStars(product.getAverageRate());
+
+                List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),product.getId());
+                Optional<Discount> discountlv2 = discountList.stream()
+                        .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
+                        .findFirst();
+                Optional<Discount> discountlv1 = discountList.stream()
+                        .filter(d -> d.getLevel() != null && d.getLevel() == 1&&d.getIsActive()==true)
+                        .findFirst();
+                if(discountlv2.isPresent()){
+                    proDto.setDiscount(discountlv2.get());
+                }
+                else{
+                    if(discountlv1.isPresent()){
+                        proDto.setDiscount(discountlv1.get());
+                    }
+                }
+                products1.add(proDto);
+            }
+            long totalRecords = productRepo.count();
+
+            // Tính số lượng trang tổng cộng
+            int totalPages = (int) Math.ceil((double) totalRecords / 1);
+            return ResponseEntity.ok(new ListProDto(products1,totalPages,"success"));
+        }
+    }
+
+
+    //cái này thuộc phần elastic Sea
+    @GetMapping("/suggestion")
+    public ResponseEntity<List<Map<String,String>>> suggestion(@RequestParam("prefix") String prefix) throws IOException {
+        String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
+
+        // Loại bỏ các ký tự dấu (diacritics)
+        String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
+        List<Map<String,String>> productList=elasticsearchService.getSuggestions(prefix_no_diacritics);
+        return ResponseEntity.ok(productList);
+    }
+
+    @CrossOrigin(origins = "http://localhost:5173")
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<ProductDetailDto> testPro(@PathVariable("id") Long id) {
+        Product pro = productRepo.findById(id).get();
+        List<Discount> discounts=new ArrayList<>();
+        ProductDetailDto productDetailDto=ProductDetailDto.builder()
+                .id(pro.getId())
+                .productName(pro.getProductName())
+                .description(pro.getDescription())
+                .active(pro.getActive())
+                .max1Buy(pro.getMax1Buy())
+
+                .categories(pro.getCategories())
+                .proVarList(pro.getProVarList())
+                .build();
+        List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),productDetailDto.getId());
+        Optional<Discount> discountlv2 = discountList.stream()
+                .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
+                .findFirst();
+        Optional<Discount> discountlv1 = discountList.stream()
+                .filter(d -> d.getLevel() != null && d.getLevel() == 1&&d.getIsActive()==true)
+                .findFirst();
+        if(discountlv2.isPresent()){
+            discounts.add(discountlv2.get());
+            productDetailDto.setDiscountList(discounts);
+        }
+        else{
+            if(discountlv1.isPresent()){
+                discounts.add(discountlv1.get());
+                productDetailDto.setDiscountList(discounts);
+            }
+        }
+
+        List<String> img=new ArrayList<>();
+        for(String s:pro.getImages()){
+            String s1= s3Service.getPresignedUrl(s);
+            img.add(s1);
+        }
+        productDetailDto.setImages(img);
+        for(ProVar proVar:pro.getProVarList()){
+                String s1= s3Service.getPresignedUrl(proVar.getImage());
+            proVar.setImage(s1);
+        }
+
+        List<Review> commentList=pro.getComments();
+        List<CommentDto> commentDtoList=new ArrayList<>();
+        for(Review comment:commentList){
+            List<String> commentIamgeList=new ArrayList<>();
+            for(String s :comment.getContextImage()){
+
+                String s1= s3Service.getPresignedUrl(s);
+                commentIamgeList.add(s1);
+            }
+            CommentDto commentDto=CommentDto.builder()
+                            .commentId(comment.getId())
+                                    .productId(comment.getProduct().getId())
+                                            .content(comment.getContent())
+                                                    .contextImage(commentIamgeList)
+                    .commentTime(comment.getCommentTime())
+                                                            .userEmail(maskEmail(comment.getUser().getEmail())).build();
+
+            commentDtoList.add(commentDto);
+        }
+        productDetailDto.setComments(commentDtoList);
+        return ResponseEntity.ok(productDetailDto);
+    }
+
+    @GetMapping("/getAllCategory")
+    public ResponseEntity<List<Category>> getAllCategory() {
+        List<Category> categories = categoryRepo.findAll();
+        return ResponseEntity.ok(categories);
+    }
+
+    @GetMapping("/getAllProduct")
+    public ResponseEntity<ProDto> getAllProduct(@RequestParam("currentPage") int currentPage, @RequestParam("pageSize") int pageSize) {
+        {
+            Pageable pageable = PageRequest.of(currentPage, pageSize);
+            Page<Product> productPage = productRepo.findAll(pageable);
+
+            List<Product> products = productRepo.findAll();//?
+            Short totalPage = (short) ((short) products.size()/pageSize +1);
+            if (products.size() == 0) {
+                return ResponseEntity.ok((new ProDto("Total product : 0")));
+            }
+            List<ProductDetailDto> products1 = new ArrayList<>();
+            for (Product product : productPage) {
+                ProductDetailDto productDetailDto = new ProductDetailDto();
+                productDetailDto.setId(product.getId());
+                productDetailDto.setProductName(product.getProductName());
+                productDetailDto.setActive(product.getActive());
+                productDetailDto.setPrice(product.getProVarList().getFirst().getPrice());
+                if (product.getDiscounts().size() > 0) {
+                    List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),product.getId());
+                   productDetailDto.setDiscountList(discountList);
+                }
+                productDetailDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
+                Integer total = 0;
+                Short totalVariant = 0;
+                for (ProVar proVar : product.getProVarList()) {
+                    total += proVar.getStock().intValue();
+                    for (Var var : proVar.getVars()) {
+                        totalVariant++;
+                    }
+                }
+
+                productDetailDto.setTotalStock(total);
+                productDetailDto.setTotalVariant(totalVariant);
+
+                products1.add(productDetailDto);
+            }
+
+            return ResponseEntity.ok(new ProDto("success", (short) 10, products1));
+        }
+    }
+
+
+
     public static String extractFilenameFromUrl(String url) {
         try {
             URL urlObj = new URL(url);
@@ -498,73 +615,13 @@ public class ProductController {
         return productRepo.findById(id).get();
     }
 
-    @GetMapping("/getAllProductRandom")
-    public ResponseEntity<ListProDto> getAllProductRandom(@RequestParam("currentPage") int currentPage) {
-        {
-            List<Product> allProducts = new ArrayList<>();
 
-            for (int i = 0; i <= currentPage; i++) {
-                Pageable pageable = PageRequest.of(i, 1);
-                Page<Product> productPage = productRepo.findAll(pageable);
-                allProducts.addAll(productPage.getContent());
-            }
-
-            List<ProDto1> products1 = new ArrayList<>();
-            for (Product product : allProducts) {
-               ProDto1 proDto=new ProDto1();
-
-               proDto.setId(product.getId());
-               proDto.setProductName(product.getProductName());
-               proDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
-                BigDecimal minPrice = product.getProVarList().stream()
-                        .map(ProVar::getPrice)
-                        .min(BigDecimal::compareTo)
-                        .orElse(BigDecimal.ZERO); // Giá trị mặc định nếu danh sách rỗng
-
-                proDto.setPrice(minPrice);
-
-                proDto.setNumberOfStars(product.getRateCount());
-                proDto.setAverageStars(product.getAverageRate());
-
-                List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),product.getId());
-                Optional<Discount> discountlv2 = discountList.stream()
-                        .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
-                        .findFirst();
-                Optional<Discount> discountlv1 = discountList.stream()
-                        .filter(d -> d.getLevel() != null && d.getLevel() == 1&&d.getIsActive()==true)
-                        .findFirst();
-                if(discountlv2.isPresent()){
-                    proDto.setDiscount(discountlv2.get());
-                }
-                else{
-                    if(discountlv1.isPresent()){
-                        proDto.setDiscount(discountlv1.get());
-                    }
-                }
-                products1.add(proDto);
-            }
-            long totalRecords = productRepo.count();
-
-            // Tính số lượng trang tổng cộng
-            int totalPages = (int) Math.ceil((double) totalRecords / 1);
-            return ResponseEntity.ok(new ListProDto(products1,totalPages,"success"));
-        }
-    }
 
     //Elastic search
     @GetMapping("/importAllProductToElastic")
     public ResponseEntity<List<?>> importAllProductToElastic() {
         List<Product> allProducts = productRepo.findAll();
         List<?> productList=elasticsearchService.indexProducts(allProducts);
-        return ResponseEntity.ok(productList);
-    }
-    @GetMapping("/suggestion")
-    public ResponseEntity<List<Map<String,String>>> suggestion(@RequestParam("prefix") String prefix) throws IOException {
-        String normalizedString = Normalizer.normalize(prefix, Normalizer.Form.NFD);
-
-        // Loại bỏ các ký tự dấu (diacritics)
-        String prefix_no_diacritics = normalizedString.replaceAll("\\p{M}", "");
-        List<Map<String,String>> productList=elasticsearchService.getSuggestions(prefix_no_diacritics);
         return ResponseEntity.ok(productList);
     }
     @GetMapping("/getProductSearch")
@@ -597,116 +654,157 @@ public class ProductController {
         return ResponseEntity.ok(productList);
     }
     // kết thúc elastic
-    @PostMapping("/updateCountProduct/{id}")
-    public ResponseEntity<Product> updateCountProduct(@PathVariable("id") Long id) {
-        Product product=productRepo.findById(id).get();
-        if(product.getCountProduct()==null){
-            CountProduct countProduct=new CountProduct();
-            CountPerMonth countPerMonth=new CountPerMonth();
-            countPerMonth.setCountPro(1l);
-            countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
-            countPerMonthRepo.save(countPerMonth);
-            countProduct.addCountPerMonth(countPerMonth);
-            countProductRepo.save(countProduct);
-            product.addCountProduct(countProduct);
-            productRepo.save(product);
-            return ResponseEntity.ok(product);
-        }
-        else{
-            CountProduct countProduct=product.getCountProduct();
-            List<CountPerMonth> countPerMonths=countProduct.getCountPerMonths();
-            for(CountPerMonth countPerMonth:countPerMonths){
-                if(countPerMonth.getDateCount().equals(YearMonth.from(LocalDate.now()))){
-                    countPerMonth.setCountPro(countPerMonth.getCountPro()+1);
-                    countPerMonthRepo.save(countPerMonth);
-                    return ResponseEntity.ok(product);
-                }
-            }
 
-            CountPerMonth countPerMonth=new CountPerMonth();
-            countPerMonth.setCountPro(1l);
-            countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
-            countPerMonthRepo.save(countPerMonth);
-            countProduct.addCountPerMonth(countPerMonth);
-            countProductRepo.save(countProduct);
-            product.addCountProduct(countProduct);
-            productRepo.save(product);
 
-            return ResponseEntity.ok(product);
-        }
 
-    }
 
-    @GetMapping("/top10ProductSearchPerMonth")
-    public ResponseEntity<List<Product>> top10ProductSearchPerMonth(@RequestParam("date") YearMonth date) {
-        Pageable pageable = PageRequest.of(0, 10); // Trang đầu tiên, 10 kết quả
-        List<Product>   products= productRepo.findTop10ProductsWithHighestCountPerMonth( date, pageable).getContent();
-        return ResponseEntity.ok(products);
-    }
-    @GetMapping("/getTop10ProductByElastic")
-    public ResponseEntity<List<Map<String,String>>> getTop10ProductByElastic(@RequestParam("texts") String texts) {
-        return ResponseEntity.ok(elasticsearchService.top10ProductCountSearch(texts));
-    }
     //get 10 sản phẩm có số lượt count nhiều nhất
 
-    @GetMapping("/get5ProductSale")
-    public ResponseEntity<ListProDto> get5ProductSale() {
-        List<Product> products = productRepo.findDiscounts1((LocalDate.now()),PageRequest.of(0, 7));
-        List<ProDto1> products1 = new ArrayList<>();
-        for (Product product : products) {
-            ProDto1 proDto=new ProDto1();
 
-            proDto.setId(product.getId());
-            proDto.setProductName(product.getProductName());
-            proDto.setImage(s3Service.getPresignedUrl(product.getImages().get(0)));
-            BigDecimal minPrice = product.getProVarList().stream()
-                    .map(ProVar::getPrice)
-                    .min(BigDecimal::compareTo)
-                    .orElse(BigDecimal.ZERO); // Giá trị mặc định nếu danh sách rỗng
-
-            proDto.setPrice(minPrice);
-
-            proDto.setNumberOfStars(product.getRateCount());
-            proDto.setAverageStars(product.getAverageRate());
-
-            List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),product.getId());
-            Optional<Discount> discountlv2 = discountList.stream()
-                    .filter(d -> d.getLevel() != null && d.getLevel() == 2)
-                    .findFirst();
-            Optional<Discount> discountlv1 = discountList.stream()
-                    .filter(d -> d.getLevel() != null && d.getLevel() == 1)
-                    .findFirst();
-            if(discountlv2.isPresent()){
-                proDto.setDiscount(discountlv2.get());
-            }
-            else{
-                if(discountlv1.isPresent()){
-                    proDto.setDiscount(discountlv1.get());
-                }
-            }
-            products1.add(proDto);
-        }
-
-
-        // Tính số lượng trang tổng cộng
-
-        return ResponseEntity.ok(new ListProDto(products1,0,"success"));
-    }
 
     @GetMapping("/getRecommentSearch")
     public ResponseEntity<List<Map<String,String>>> RecommentSearch(@RequestParam("texts") String texts) {
         return ResponseEntity.ok(elasticsearchService.recommentSearch(texts));
     }
+    @PostMapping("/createComment")
+    public ResponseEntity<Review> createComment(@ModelAttribute ReviewRequest commentRequest) throws IOException, ExecutionException, InterruptedException {
+
+        long startTime = System.currentTimeMillis(); // Bắt đầu đo thời gian toàn bộ phương thức
+
+        User user = userService.getAuthenticatedUser()
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        long userFetchTime = System.currentTimeMillis(); // Đo thời gian lấy User
+        System.out.println("Fetch user time: " + (userFetchTime - startTime) + "ms");
+
+        Product product = productRepo.findById(commentRequest.getProductId())
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        long productFetchTime = System.currentTimeMillis(); // Đo thời gian lấy Product
+        System.out.println("Fetch product time: " + (productFetchTime - userFetchTime) + "ms");
+
+        List<OrderPaid> orderPaidList = orderPaidRepo.findAllByUserId(user.getId());
+        long orderPaidFetchTime = System.currentTimeMillis(); // Đo thời gian lấy OrderPaid
+        System.out.println("Fetch orderPaid list time: " + (orderPaidFetchTime - productFetchTime) + "ms");
+
+        Boolean checked = false;
+        Integer count=0;
+        for (OrderPaid orderPaid : orderPaidList) {
+            String jsonString = objectMapper.writeValueAsString(orderPaid.getPropertiesArray());
+            Object o1 = objectMapper.readValue(jsonString, Object.class);
+            System.out.println(o1);
+            OrderPaidDto orderPaidDto = objectMapper.convertValue(o1, OrderPaidDto.class);
+            System.out.println(orderPaidDto);
+
+            if (orderPaidDto.getStatus().equals("Paid")) {
+                for (OrderPaidItemDto orderPaidItemDto : orderPaidDto.getOrderPaidItemDtos()) {
+                    System.out.println(orderPaidItemDto);
+                    if (commentRequest.getProductId().equals(orderPaidItemDto.getProductId())) {
+                        checked = true;
+                        count++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!checked) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+//        List<Review> comments=reviewRepo.getListCommentByProductId(commentRequest.getProductId(),user.getId());
+//        if(comments.size()>=count){
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+//                    .header("Error", "Chỉ được bình luận tối đa " + count + " lần")
+//                    .body(null);
+//        }
+//        List<String> newImage     = new ArrayList<>();
+        long imageUploadStartTime = System.currentTimeMillis();
+//        List<CompletableFuture<String>> futures = new ArrayList<>();
+//        for (MultipartFile file : commentRequest.getFiles()) {
+//            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+//                try {
+//                    return s3Service.uploadToS3(file, "comment");
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            });
+//            futures.add(future);
+//        }
+//        List<String> newImage = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+        List<String> newImage = s3Service.addtoS3improve(commentRequest.getFiles(), "comment");
+
+        long imageUploadEndTime = System.currentTimeMillis(); // Đo thời gian upload hình ảnh
+        System.out.println("Image upload time: " + (imageUploadEndTime - imageUploadStartTime) + "ms");
+
+        Review comment = Review.builder()
+                .content(commentRequest.getContent())
+                .contextImage(newImage)
+                .commentTime(LocalDate.now())
+                .rateNumber(commentRequest.getRateNumber())
+                .build();
+        long commentSaveStartTime = System.currentTimeMillis();
+        reviewRepo.save(comment);
+        long commentSaveEndTime = System.currentTimeMillis(); // Đo thời gian lưu comment
+        System.out.println("Comment save time: " + (commentSaveEndTime - commentSaveStartTime) + "ms");
+
+        user.addComment(comment);
+        product.addComment(comment);
+        long userProductSaveStartTime = System.currentTimeMillis();
+        userRepo.save(user);
+        productRepo.save(product);
+        long userProductSaveEndTime = System.currentTimeMillis(); // Đo thời gian lưu User và Product
+        System.out.println("User & Product save time: " + (userProductSaveEndTime - userProductSaveStartTime) + "ms");
+
+        long endTime = System.currentTimeMillis(); // Kết thúc đo thời gian toàn bộ phương thức
+        System.out.println("Total time: " + (endTime - startTime) + "ms");
+
+        return ResponseEntity.ok(comment);
+    }
+
+
+    @GetMapping("/getComment")
+    public ResponseEntity<List<Review>> getComment(@RequestParam("productId") Long productId) {
+        Product product = productRepo.findById(productId)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        return ResponseEntity.ok(product.getComments());
+    }
+
+    public String maskEmail(String email) {
+        int visibleLength = 3; // Số ký tự đầu được hiển thị
+        String mask = "*****"; // Phần còn lại thay bằng dấu sao
+
+        if (email == null || email.length() <= visibleLength) {
+            return email; // Nếu email quá ngắn thì không mask
+        }
+
+        // Cắt lấy 3 ký tự đầu tiên
+        String visiblePart = email.substring(0, visibleLength);
+
+        // Tìm vị trí của dấu '@'
+        int atIndex = email.indexOf("@");
+
+        if (atIndex != -1) {
+            // Giữ nguyên phần sau '@'
+            String domainPart = email.substring(atIndex);
+            return visiblePart + mask + domainPart;
+        } else {
+            // Trường hợp không tìm thấy '@', chỉ mask phần còn lại
+            return visiblePart + mask;
+        }
+    }
 
 
 
 
 
 
-
-
-
-
+    @GetMapping("/getProduct/{id}")
+    public Product getProduct() {
+        return productRepo.findById(1L).get();
+    }
+    @GetMapping("/testProvar/{id}")
+    public ResponseEntity<?> testProvar(@PathVariable("id") Long id) {
+        ProVar proVar = productVarRepo.findById(id).get();
+        return ResponseEntity.ok(proVar);
+    }
 
     @PostMapping("/updateProduct1")
     public ResponseEntity<String> updateProduct2(@ModelAttribute ExtraUpdateList extraProductVariantList) throws IOException {
@@ -849,3 +947,54 @@ public class ProductController {
 
 
 
+//@PostMapping("/updateCountProduct/{id}")
+//public ResponseEntity<Product> updateCountProduct(@PathVariable("id") Long id) {
+//    Product product=productRepo.findById(id).get();
+//    if(product.getCountProduct()==null){
+//        CountProduct countProduct=new CountProduct();
+//        CountPerMonth countPerMonth=new CountPerMonth();
+//        countPerMonth.setCountPro(1l);
+//        countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
+//        countPerMonthRepo.save(countPerMonth);
+//        countProduct.addCountPerMonth(countPerMonth);
+//        countProductRepo.save(countProduct);
+//        product.addCountProduct(countProduct);
+//        productRepo.save(product);
+//        return ResponseEntity.ok(product);
+//    }
+//    else{
+//        CountProduct countProduct=product.getCountProduct();
+//        List<CountPerMonth> countPerMonths=countProduct.getCountPerMonths();
+//        for(CountPerMonth countPerMonth:countPerMonths){
+//            if(countPerMonth.getDateCount().equals(YearMonth.from(LocalDate.now()))){
+//                countPerMonth.setCountPro(countPerMonth.getCountPro()+1);
+//                countPerMonthRepo.save(countPerMonth);
+//                return ResponseEntity.ok(product);
+//            }
+//        }
+//
+//        CountPerMonth countPerMonth=new CountPerMonth();
+//        countPerMonth.setCountPro(1l);
+//        countPerMonth.setDateCount(YearMonth.from(LocalDate.now()));
+//        countPerMonthRepo.save(countPerMonth);
+//        countProduct.addCountPerMonth(countPerMonth);
+//        countProductRepo.save(countProduct);
+//        product.addCountProduct(countProduct);
+//        productRepo.save(product);
+//
+//        return ResponseEntity.ok(product);
+//    }
+//
+//}
+
+//@GetMapping("/top10ProductSearchPerMonth")
+//public ResponseEntity<List<Product>> top10ProductSearchPerMonth(@RequestParam("date") YearMonth date) {
+//    Pageable pageable = PageRequest.of(0, 10); // Trang đầu tiên, 10 kết quả
+//    List<Product>   products= productRepo.findTop10ProductsWithHighestCountPerMonth( date, pageable).getContent();
+//    return ResponseEntity.ok(products);
+//}
+
+//@GetMapping("/getTop10ProductByElastic")
+//public ResponseEntity<List<Map<String,String>>> getTop10ProductByElastic(@RequestParam("texts") String texts) {
+//    return ResponseEntity.ok(elasticsearchService.top10ProductCountSearch(texts));
+//}

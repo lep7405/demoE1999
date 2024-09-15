@@ -1,5 +1,6 @@
 package com.example.demoe.Dto.Cart;
 
+import com.example.demoe.Dto.Discount.DiscountDtoCartRedis;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,7 +19,7 @@ public class CartItemDto {
     private int quantity;
     private long provarId;
     private BigDecimal price;
-    private BigDecimal discountValue;
+    private DiscountDtoCartRedis discount;
     private String image;
     private List<Vars> varList;
     private Integer max1Buy;

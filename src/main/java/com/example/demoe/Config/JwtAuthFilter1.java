@@ -1,5 +1,6 @@
 package com.example.demoe.Config;
 
+import com.example.demoe.Entity.TOKEN.Token;
 import com.example.demoe.Repository.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -41,11 +43,26 @@ public class JwtAuthFilter1 extends OncePerRequestFilter {
             throw new RuntimeException(e);
         }
         logger.info("emaill"+emaill);
+        logger.info("hello1");
+        logger.info(""+jwt);
+        Optional<Token> optionalToken = tokenRepo.findByToken(jwt);
+        logger.info("hello1.1");
+        if(!optionalToken.isPresent()){
+            filterChain.doFilter(request,response);
+            return;
+        }
+        logger.info("hello2");
+        Token token = optionalToken.get();
+
+        String finger=token.getDevice();
+        logger.info("hello3");
         if(emaill!=null&& SecurityContextHolder.getContext().getAuthentication()==null){
+            logger.info("hello4");
             UserDetails userDetails=this.userDetailsService.loadUserByUsername(emaill);
+            logger.info("hello5");
             logger.info("use "+userDetails);
             var isTokenValid = tokenRepo.findByToken(jwt)
-                    .map(t -> !t.isRevolked() && !t.isRevolked())
+                    .map(t -> !t.isRevolked() && !t.isRevolked()&&t.getDevice().equals(finger))
                     .orElse(false);
             logger.info("useeeeeeeeeeeeeeeeeeeeeeeeeeeeeee "+userDetails);
             try {

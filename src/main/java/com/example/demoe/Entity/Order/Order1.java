@@ -1,12 +1,14 @@
 package com.example.demoe.Entity.Order;
 
 import com.example.demoe.Entity.Address.Address;
+import com.example.demoe.Entity.Shipping.Shipping;
 import com.example.demoe.Entity.User;
 import com.example.demoe.Entity.cart.CartItem;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,8 +25,9 @@ public class Order1 {
     private Long id;
     private Long txnRep;
     private LocalDate order1Date;
-    private String price;
     private String status;
+
+    private BigDecimal price;
     @OneToMany(mappedBy = "order1")
     private List<Order1Item> order1ItemList;
     public void addOrder1Item(Order1Item order1Item) {
@@ -38,8 +41,24 @@ public class Order1 {
     @OneToOne(mappedBy = "order1")
     private Address address;
 
+    public void addAddress(Address address) {
+        this.address = address;
+        address.setOrder1(this);
+    }
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;
+
+    @OneToMany(mappedBy = "order1")
+    private List<Shipping> shippingList;
+
+    public void addShipping(Shipping shipping) {
+        if(shippingList == null) {
+            shippingList = new ArrayList<>();
+        }
+        shippingList.add(shipping);
+        shipping.setOrder1(this);
+    }
 }

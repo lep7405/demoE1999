@@ -304,7 +304,7 @@ public class ElasticsearchService {
                 proDto.setNumberOfStars(hit.source().getRateCount());
                 proDto.setAverageStars(hit.source().getAverageRate());
 
-                List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),hit.source().getId());
+                List<Discount> discountList=discountRepo.findDiscounts1((new Date()).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime(),hit.source().getId());
                 Optional<Discount> discountlv2 = discountList.stream()
                         .filter(d -> d.getLevel() != null && d.getLevel() == 2&&d.getIsActive()==true)
                         .findFirst();

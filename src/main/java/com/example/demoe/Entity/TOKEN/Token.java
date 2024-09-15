@@ -3,14 +3,12 @@ package com.example.demoe.Entity.TOKEN;
 import com.example.demoe.Entity.Account;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.w3c.dom.Text;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -27,6 +25,7 @@ public class Token {
     private String refreshToken;
     private String device;
     @ManyToOne()
+    @JoinColumn(name = "account_id")
     @JsonIgnore
     private Account account;
 

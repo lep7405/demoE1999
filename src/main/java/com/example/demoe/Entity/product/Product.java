@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -138,5 +137,20 @@ public class Product {
         }
         order1Items.add(order1Item);
         order1Item.setProduct(this);
+    }
+
+//    @OneToOne(mappedBy = "product")
+//    @JsonIgnore
+//    private CartItem cartItem;
+
+
+    @OneToMany(mappedBy = "product")
+    private List<Review> comments;
+    public void addComment(Review comment){
+        if(comments==null){
+            comments=new ArrayList<>();
+        }
+        comments.add(comment);
+        comment.setProduct(this);
     }
 }
